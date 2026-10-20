@@ -58,6 +58,7 @@ class QLabel;
 class MinecraftLauncher;
 class BaseProfilerFactory;
 class InstanceView;
+class HomeWidget;
 class KonamiCode;
 class InstanceTask;
 class LabeledToolButton;
@@ -179,6 +180,7 @@ class MainWindow : public QMainWindow {
     void updateMainToolBar();
 
     void updateLaunchButton();
+    void updateHome();
 
     void updateThemeMenu();
 
@@ -234,6 +236,7 @@ class MainWindow : public QMainWindow {
     Ui::MainWindow* ui;
     // these are managed by Qt's memory management model!
     InstanceView* view = nullptr;
+    HomeWidget* m_home = nullptr;
     InstanceProxyModel* proxymodel = nullptr;
     QToolButton* newsLabel = nullptr;
     QLabel* m_statusLeft = nullptr;

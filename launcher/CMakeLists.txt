@@ -870,6 +870,8 @@ SET(LAUNCHER_SOURCES
     ui/themes/CustomTheme.h
     ui/themes/DarkTheme.cpp
     ui/themes/DarkTheme.h
+    ui/scaleri/HomeWidget.cpp
+    ui/scaleri/HomeWidget.h
     ui/themes/ScaleriTheme.cpp
     ui/themes/ScaleriTheme.h
     ui/themes/ITheme.cpp

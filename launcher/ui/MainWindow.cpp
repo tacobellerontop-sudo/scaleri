@@ -63,6 +63,7 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QMenu>
+#include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QProgressDialog>
@@ -93,6 +94,7 @@
 #include "InstanceWindow.h"
 
 #include "ui/GuiUtil.h"
+#include "ui/scaleri/HomeWidget.h"
 #include "ui/ViewLogWindow.h"
 #include "ui/dialogs/AboutDialog.h"
 #include "ui/dialogs/CopyInstanceDialog.h"
@@ -331,7 +333,34 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
-        ui->horizontalLayout->addWidget(view);
+
+        // Scaleri's home screen replaces the classic toolbars. It is driven by the same actions, so the toolbars are
+        // taken out of the window layout (and out of saved window states) but otherwise keep working.
+        m_home = new HomeWidget(ui->centralWidget);
+        m_home->addSidebarAction(ui->actionAddInstance);
+        m_home->addSidebarAction(ui->actionSettings);
+        m_home->addSidebarAction(ui->actionFoldersButton);
+        m_home->addSidebarAction(ui->actionHelpButton);
+        m_home->addSidebarAction(ui->actionMoreNews);
+        m_home->addSidebarFooterAction(ui->actionAccountsButton);
+        m_home->setInstanceActions(ui->actionLaunchInstance, ui->actionEditInstance, ui->actionViewSelectedInstFolder,
+                                   ui->actionChangeInstIcon,
+                                   { ui->actionKillInstance, ui->actionRenameInstance, ui->actionChangeInstGroup,
+                                     ui->actionExportInstance, ui->actionCopyInstance, ui->actionCreateInstanceShortcut, nullptr,
+                                     ui->actionDeleteInstance });
+        m_home->setInstanceView(view);
+
+        proxymodel->setFilterCaseSensitivity(Qt::CaseInsensitive);
+        connect(m_home->searchBox(), &QLineEdit::textChanged, proxymodel, &QSortFilterProxyModel::setFilterFixedString);
+
+        ui->horizontalLayout->setContentsMargins(0, 0, 0, 0);
+        ui->horizontalLayout->addWidget(m_home);
+
+        removeToolBar(ui->mainToolBar);
+        removeToolBar(ui->instanceToolBar);
+        removeToolBar(ui->newsToolBar);
+        ui->viewMenu->removeAction(ui->instanceToolBar->toggleViewAction());
+        ui->viewMenu->removeAction(ui->newsToolBar->toggleViewAction());
     }
     // The cat background
     {
@@ -455,6 +484,7 @@ void MainWindow::retranslateUi()
     }
 
     ui->retranslateUi(this);
+    ui->actionLaunchInstance->setText(tr("Play"));
 
     MinecraftAccountPtr defaultAccount = APPLICATION->accounts()->defaultAccount();
     if (defaultAccount) {
@@ -591,7 +621,8 @@ void MainWindow::showInstanceContextMenu(const QPoint& pos)
 void MainWindow::updateMainToolBar()
 {
     ui->menuBar->setVisible(APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool());
-    ui->mainToolBar->setVisible(ui->menuBar->isNativeMenuBar() || !APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool());
+    // the home screen's sidebar replaces the main toolbar
+    ui->mainToolBar->setVisible(false);
 }
 
 void MainWindow::updateLaunchButton()
@@ -1221,6 +1252,14 @@ void MainWindow::iconUpdated(QString icon)
         auto new_icon = APPLICATION->icons()->getIcon(m_currentInstIcon);
         ui->actionChangeInstIcon->setIcon(new_icon);
         changeIconButton->setIcon(new_icon);
+        updateHome();
+    }
+}
+
+void MainWindow::updateHome()
+{
+    if (m_home) {
+        m_home->setInstance(m_selectedInstance, APPLICATION->icons()->getIcon(m_currentInstIcon));
     }
 }
 
@@ -1679,6 +1718,7 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         updateInstanceToolIcon(m_selectedInstance->iconKey());
 
         updateLaunchButton();
+        updateHome();
 
         APPLICATION->settings()->set("SelectedInstance", m_selectedInstance->id());
 
@@ -1717,6 +1757,7 @@ void MainWindow::selectionBad()
     updateLaunchButton();
     renameButton->setText(tr("Rename Instance"));
     updateInstanceToolIcon("grass");
+    updateHome();
 
     // ...and then see if we can enable the previously selected instance
     setSelectedInstanceById(APPLICATION->settings()->get("SelectedInstance").toString());

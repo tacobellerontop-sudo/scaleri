@@ -828,3 +828,175 @@ QToolBar QToolButton[actionName="actionLaunchInstance"]:disabled {
 QToolBar QToolButton[actionName="actionLaunchInstance"]::menu-button {
     border-left: 2px solid #1d4d13;
 }
+
+/* ======================================================================
+ * Home screen (ui/scaleri/HomeWidget)
+ * ====================================================================== */
+
+#scaleriSidebar {
+    background-color: #1a1a1b;
+    border-right: 2px solid #121213;
+}
+
+#scaleriWordmark {
+    color: #9be15d;
+}
+
+#scaleriSidebar QToolButton[sidebarButton="true"] {
+    background-color: transparent;
+    border: 2px solid transparent;
+    color: #d0d1d4;
+    padding: 6px 10px;
+    text-align: left;
+}
+
+#scaleriSidebar QToolButton[sidebarButton="true"]:hover {
+    background-color: #313233;
+    border-color: #121213;
+    border-left: 4px solid #6cc349;
+    color: #ffffff;
+}
+
+#scaleriSidebar QToolButton[sidebarButton="true"]:pressed,
+#scaleriSidebar QToolButton[sidebarButton="true"]:open {
+    background-color: #3c8527;
+    color: #ffffff;
+}
+
+#scaleriSidebar QToolButton[sidebarButton="true"]::menu-indicator {
+    image: none;
+    width: 0;
+}
+
+#scaleriSidebar QToolButton[sidebarFooter="true"] {
+    background-color: #262627;
+    border: 2px solid #121213;
+    border-top-color: #3a3b3c;
+}
+
+#scaleriMain {
+    background-color: #1e1e1f;
+}
+
+#heroEyebrow {
+    color: #9be15d;
+    font-weight: bold;
+}
+
+#heroTitle {
+    color: #ffffff;
+}
+
+#heroDetails {
+    color: #d0d1d4;
+}
+
+#heroPlaytime {
+    color: #a8a9ac;
+}
+
+#heroInstanceIcon {
+    background-color: rgba(18, 18, 19, 170);
+    border: 2px solid #121213;
+    border-top-color: #5a5b5c;
+}
+
+#heroInstanceIcon:hover {
+    background-color: rgba(60, 133, 39, 170);
+    border-top-color: #6cc349;
+}
+
+QToolButton#heroPlayButton {
+    color: #ffffff;
+    border: 2px solid #121213;
+    padding: 8px 28px 10px 28px;
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #6cc349, stop: 0.08 #6cc349,
+        stop: 0.0801 #3c8527, stop: 0.86 #3c8527,
+        stop: 0.8601 #1d4d13, stop: 1 #1d4d13);
+}
+
+QToolButton#heroPlayButton:hover {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #86d65f, stop: 0.08 #86d65f,
+        stop: 0.0801 #4a9a32, stop: 0.86 #4a9a32,
+        stop: 0.8601 #24601a, stop: 1 #24601a);
+}
+
+QToolButton#heroPlayButton:pressed {
+    background-color: #2f6a1f;
+    padding: 10px 28px 8px 28px;
+}
+
+QToolButton#heroPlayButton:disabled {
+    color: #6d6e70;
+    background-color: #2a2b2c;
+    border-color: #1e1e1f;
+}
+
+QToolButton#heroPlayButton[popupMode="1"] {
+    padding-right: 40px;
+}
+
+QToolButton#heroPlayButton::menu-button {
+    width: 26px;
+    border: none;
+    border-left: 2px solid #1d4d13;
+}
+
+QToolButton#heroPlayButton::menu-arrow {
+    image: url(:/scaleri/arrow-down.svg);
+    width: 9px;
+    height: 5px;
+}
+
+QToolButton[heroSecondary="true"] {
+    color: #ffffff;
+    border: 2px solid #121213;
+    padding: 6px 14px 8px 14px;
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #6d6e70, stop: 0.08 #6d6e70,
+        stop: 0.0801 #48494a, stop: 0.86 #48494a,
+        stop: 0.8601 #313233, stop: 1 #313233);
+}
+
+QToolButton[heroSecondary="true"]:hover {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+        stop: 0 #838487, stop: 0.08 #838487,
+        stop: 0.0801 #5a5b5c, stop: 0.86 #5a5b5c,
+        stop: 0.8601 #3a3b3c, stop: 1 #3a3b3c);
+}
+
+QToolButton[heroSecondary="true"]:pressed,
+QToolButton[heroSecondary="true"]:open {
+    background-color: #3a3b3c;
+}
+
+QToolButton[heroSecondary="true"]:disabled {
+    color: #6d6e70;
+    background-color: #2a2b2c;
+    border-color: #1e1e1f;
+}
+
+QToolButton#heroMoreButton::menu-indicator {
+    image: url(:/scaleri/arrow-down.svg);
+    subcontrol-position: center right;
+    right: 8px;
+}
+
+QToolButton#heroMoreButton {
+    padding-right: 26px;
+}
+
+#scaleriLibrary {
+    background-color: #1e1e1f;
+}
+
+#libraryTitle {
+    color: #ffffff;
+}
+
+#scaleriLibrary QAbstractItemView {
+    border: none;
+    background-color: #1e1e1f;
+}
