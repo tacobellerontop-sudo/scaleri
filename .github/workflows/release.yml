@@ -1,126 +1,42 @@
-name: Build Application and Make Release
+name: Release
 
 on:
   push:
-    tags:
-      - "*"
+    tags: ["v*"]
 
-permissions: {}
+permissions:
+  contents: write
 
 jobs:
-  build_release:
-    name: Build Release
-    uses: ./.github/workflows/build.yml
-    permissions:
-      contents: read
-      # Required for Azure Trusted Signing
-      id-token: write
-      # Required for vcpkg binary cache
-      packages: write
-    with:
-      build-type: Release
-      environment: Release
-    secrets: inherit
-
-  create_release:
-    needs: build_release
-    permissions:
-      contents: write
-    runs-on: ubuntu-slim
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+  release:
+    name: Build and publish
+    runs-on: windows-latest
+    env:
+      SCALERI_MSA_CLIENT_ID: ${{ secrets.MSA_CLIENT_ID }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          submodules: "true"
-          path: "Scaleri-source"
-      - name: Download artifacts
-        uses: actions/download-artifact@v8
-      - name: Grab and store version
+      - uses: actions/checkout@v6
+
+      - name: Set up Rust
         run: |
-          tag_name=$(echo ${{ github.ref }} | grep -oE "[^/]+$")
-          echo "VERSION=$tag_name" >> $GITHUB_ENV
-      - name: Package artifacts properly
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Package
+        shell: bash
         run: |
-          mv ${{ github.workspace }}/Scaleri-source Scaleri-${{ env.VERSION }}
-          mv Scaleri-Linux-Qt6-Portable*/Scaleri-portable.tar.gz Scaleri-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
-          mv Scaleri-Linux-aarch64-Qt6-Portable*/Scaleri-portable.tar.gz Scaleri-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
-          mv Scaleri-*.AppImage/Scaleri-*-x86_64.AppImage Scaleri-Linux-x86_64.AppImage
-          mv Scaleri-*.AppImage.zsync/Scaleri-*-x86_64.AppImage.zsync Scaleri-Linux-x86_64.AppImage.zsync
-          mv Scaleri-*.AppImage/Scaleri-*-aarch64.AppImage Scaleri-Linux-aarch64.AppImage
-          mv Scaleri-*.AppImage.zsync/Scaleri-*-aarch64.AppImage.zsync Scaleri-Linux-aarch64.AppImage.zsync
-          mv Scaleri-macOS*/Scaleri.zip Scaleri-macOS-${{ env.VERSION }}.zip
-          mv Scaleri-macOS*/Scaleri.dmg Scaleri-macOS-${{ env.VERSION }}.dmg
+          mkdir dist
+          cp target/release/scaleri.exe dist/Scaleri.exe
+          cp LICENSE dist/
+          cd dist && 7z a ../Scaleri-Windows-x64-${GITHUB_REF_NAME}.zip Scaleri.exe LICENSE
 
-          tar --exclude='.git' -czf Scaleri-${{ env.VERSION }}.tar.gz Scaleri-${{ env.VERSION }}
-
-          for d in Scaleri-Windows-MSVC*; do
-            cd "${d}" || continue
-            LEGACY="$(echo -n ${d} | grep -o Legacy || true)"
-            ARM64="$(echo -n ${d} | grep -o arm64 || true)"
-            INST="$(echo -n ${d} | grep -o Setup || true)"
-            PORT="$(echo -n ${d} | grep -o Portable || true)"
-            NAME="Scaleri-Windows-MSVC"
-            test -z "${LEGACY}" || NAME="${NAME}-Legacy"
-            test -z "${ARM64}" || NAME="${NAME}-arm64"
-            test -z "${PORT}" || NAME="${NAME}-Portable"
-            test -z "${INST}" || mv Scaleri-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
-            test -n "${INST}" || zip -r -9 "../${NAME}-${{ env.VERSION }}.zip" *
-            cd ..
-          done
-
-          for d in Scaleri-Windows-MinGW-w64*; do
-            cd "${d}" || continue
-            INST="$(echo -n ${d} | grep -o Setup || true)"
-            PORT="$(echo -n ${d} | grep -o Portable || true)"
-            NAME="Scaleri-Windows-MinGW-w64"
-            test -z "${PORT}" || NAME="${NAME}-Portable"
-            test -z "${INST}" || mv Scaleri-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
-            test -n "${INST}" || zip -r -9 "../${NAME}-${{ env.VERSION }}.zip" *
-            cd ..
-          done
-
-          for d in Scaleri-Windows-MinGW-arm64*; do
-            cd "${d}" || continue
-            INST="$(echo -n ${d} | grep -o Setup || true)"
-            PORT="$(echo -n ${d} | grep -o Portable || true)"
-            NAME="Scaleri-Windows-MinGW-arm64"
-            test -z "${PORT}" || NAME="${NAME}-Portable"
-            test -z "${INST}" || mv Scaleri-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
-            test -n "${INST}" || zip -r -9 "../${NAME}-${{ env.VERSION }}.zip" *
-            cd ..
-          done
-
-      - name: Create release
-        id: create_release
+      - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: ${{ github.ref }}
-          name: Scaleri ${{ env.VERSION }}
           draft: true
-          prerelease: false
-          fail_on_unmatched_files: true
+          name: Scaleri ${{ github.ref_name }}
           files: |
-            Scaleri-Linux-x86_64.AppImage
-            Scaleri-Linux-x86_64.AppImage.zsync
-            Scaleri-Linux-aarch64.AppImage
-            Scaleri-Linux-aarch64.AppImage.zsync
-            Scaleri-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
-            Scaleri-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
-            Scaleri-Windows-MinGW-w64-${{ env.VERSION }}.zip
-            Scaleri-Windows-MinGW-w64-Portable-${{ env.VERSION }}.zip
-            Scaleri-Windows-MinGW-w64-Setup-${{ env.VERSION }}.exe
-            Scaleri-Windows-MinGW-arm64-${{ env.VERSION }}.zip
-            Scaleri-Windows-MinGW-arm64-Portable-${{ env.VERSION }}.zip
-            Scaleri-Windows-MinGW-arm64-Setup-${{ env.VERSION }}.exe
-            Scaleri-Windows-MSVC-arm64-${{ env.VERSION }}.zip
-            Scaleri-Windows-MSVC-arm64-Portable-${{ env.VERSION }}.zip
-            Scaleri-Windows-MSVC-arm64-Setup-${{ env.VERSION }}.exe
-            Scaleri-Windows-MSVC-${{ env.VERSION }}.zip
-            Scaleri-Windows-MSVC-Portable-${{ env.VERSION }}.zip
-            Scaleri-Windows-MSVC-Setup-${{ env.VERSION }}.exe
-            Scaleri-macOS-${{ env.VERSION }}.zip
-            Scaleri-macOS-${{ env.VERSION }}.dmg
-            Scaleri-${{ env.VERSION }}.tar.gz
+            dist/Scaleri.exe
+            Scaleri-Windows-x64-${{ github.ref_name }}.zip
