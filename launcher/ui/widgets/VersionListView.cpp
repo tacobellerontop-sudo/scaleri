@@ -135,7 +135,8 @@ void VersionListView::paintInfoLabel(QPaintEvent* event) const
     // calculate the rect for the overlay
     QPainter painter(viewport());
     painter.setRenderHint(QPainter::Antialiasing, true);
-    QFont font("sans", 20);
+    QFont font = viewport()->font();
+    font.setPointSizeF(font.pointSizeF() * 1.3);
     font.setBold(true);
 
     QRect bounds = viewport()->geometry();
@@ -143,9 +144,8 @@ void VersionListView::paintInfoLabel(QPaintEvent* event) const
     auto innerBounds = bounds;
     innerBounds.adjust(10, 10, -10, -10);
 
-    QColor background = QApplication::palette().color(QPalette::WindowText);
-    QColor foreground = QApplication::palette().color(QPalette::Base);
-    foreground.setAlpha(190);
+    // A quiet note in the middle of the list rather than an inverted bubble
+    QColor foreground = QApplication::palette().color(QPalette::PlaceholderText);
     painter.setFont(font);
     auto fontMetrics = painter.fontMetrics();
     auto textRect = fontMetrics.boundingRect(innerBounds, Qt::AlignHCenter | Qt::TextWordWrap, emptyString);
@@ -158,10 +158,6 @@ void VersionListView::paintInfoLabel(QPaintEvent* event) const
     if (!event->rect().intersects(wrapRect)) {
         return;
     }
-
-    painter.setBrush(QBrush(background));
-    painter.setPen(foreground);
-    painter.drawRoundedRect(wrapRect, 5.0, 5.0);
 
     painter.setPen(foreground);
     painter.setFont(font);

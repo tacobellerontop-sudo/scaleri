@@ -8,11 +8,19 @@
 </p>
 
 <p align="center">
-  <img alt="Scaleri main window" src="/docs/screenshots/main-window.png" width="85%">
+  <img alt="Scaleri home screen" src="/docs/screenshots/main-window.png" width="85%">
+</p>
+<p align="center">
+  <img alt="Scaleri settings" src="/docs/screenshots/settings.png" width="42%">
+  <img alt="Scaleri instance editor" src="/docs/screenshots/edit-instance.png" width="42%">
 </p>
 
 ## What's different from Prism Launcher
 
+- **New home screen.** A sidebar for adding instances, settings, folders, help and accounts; a hero banner with a
+  pixel-art landscape showing the selected instance and a big green Play button; and a searchable instance library.
+- **Redesigned windows.** Settings, Edit Instance, New Instance and the mod browser share a new layout: a dark sidebar
+  with a green marker on the current page, and a header bar with the page's icon and title.
 - **New look.** A built-in *Scaleri* theme, on by default: deepslate greys, square corners, bevelled block buttons,
   grass-green accents, an XP-bar progress bar and Minecraft-style purple tooltips. Game logs use Minecraft's chat colours.
   The other Prism themes are still available under *Settings → Appearance*.
