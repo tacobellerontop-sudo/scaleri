@@ -18,7 +18,6 @@
 #include "HomeWidget.h"
 
 #include <QAction>
-#include <cmath>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -27,6 +26,7 @@
 #include <QPainter>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <cmath>
 
 #include "Application.h"
 #include "BaseInstance.h"
