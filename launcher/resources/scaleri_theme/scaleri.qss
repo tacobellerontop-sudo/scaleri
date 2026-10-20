@@ -828,3 +828,43 @@ QToolBar QToolButton[actionName="actionLaunchInstance"]:disabled {
 QToolBar QToolButton[actionName="actionLaunchInstance"]::menu-button {
     border-left: 2px solid #1d4d13;
 }
+
+/* ---- Settings, Edit Instance, New Instance and mod browser pages ---- */
+
+QListView#pageList {
+    background-color: #1a1a1b;
+    border: none;
+    border-right: 2px solid #121213;
+    padding: 8px 6px;
+    font-weight: bold;
+}
+
+QListView#pageList::item {
+    padding: 4px 8px;
+    margin: 1px 0;
+    border-left: 3px solid transparent;
+}
+
+QListView#pageList::item:hover {
+    background-color: #2a2a2b;
+}
+
+QListView#pageList::item:selected {
+    background-color: #2b3d23;
+    border-left: 3px solid #6cc349;
+    color: #ffffff;
+}
+
+QListView#pageList::item:selected:!active {
+    background-color: #263320;
+    border-left: 3px solid #4f9a35;
+}
+
+#pageHeader {
+    background-color: #262627;
+    border-bottom: 2px solid #121213;
+}
+
+QLabel#pageHeaderTitle {
+    color: #ffffff;
+}
