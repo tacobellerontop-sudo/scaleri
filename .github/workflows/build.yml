@@ -123,8 +123,14 @@ jobs:
       ##
 
       - name: Configure project
+        env:
+          # Optional: set these as repository secrets to enable Microsoft login and CurseForge in CI builds
+          MSA_CLIENT_ID: ${{ secrets.MSA_CLIENT_ID }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
-          cmake --preset "$CMAKE_PRESET"
+          cmake --preset "$CMAKE_PRESET" \
+            -DLauncher_MSA_CLIENT_ID="$MSA_CLIENT_ID" \
+            -DLauncher_CURSEFORGE_API_KEY="$CURSEFORGE_API_KEY"
 
       - name: Run build
         run: |
