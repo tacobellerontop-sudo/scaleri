@@ -4,9 +4,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::paths;
 
-/// The Azure application used for Microsoft sign-in. Builds can bake one in with the
+/// Scaleri's own Azure application, approved by Microsoft for the Minecraft services.
+const SCALERI_CLIENT_ID: &str = "174db889-6412-4846-869e-faafd5a578d0";
+
+/// The Azure application used for Microsoft sign-in. Builds can swap in another one with the
 /// `SCALERI_MSA_CLIENT_ID` environment variable; users can also paste one into Settings.
-pub const BUILT_IN_CLIENT_ID: Option<&str> = option_env!("SCALERI_MSA_CLIENT_ID");
+pub fn built_in_client_id() -> &'static str {
+    match option_env!("SCALERI_MSA_CLIENT_ID").map(str::trim) {
+        Some(id) if !id.is_empty() => id,
+        _ => SCALERI_CLIENT_ID,
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[serde(default)]
@@ -57,14 +65,9 @@ impl Settings {
         }
     }
 
-    pub fn client_id(&self) -> Option<String> {
+    /// The client ID to sign in with: the one pasted into Settings, or Scaleri's own.
+    pub fn client_id(&self) -> String {
         let id = self.msa_client_id.trim();
-        if !id.is_empty() {
-            return Some(id.to_string());
-        }
-        BUILT_IN_CLIENT_ID
-            .map(str::trim)
-            .filter(|id| !id.is_empty())
-            .map(String::from)
+        if id.is_empty() { built_in_client_id() } else { id }.to_string()
     }
 }

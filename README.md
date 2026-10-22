@@ -34,16 +34,12 @@ Scaleri started as a restyled fork of [Prism Launcher](https://github.com/PrismL
 rewritten from scratch in Rust. Mod loaders (Fabric, Quilt, Forge, NeoForge), modpacks and a mod browser aren't in the
 Rust version yet.
 
-## Microsoft sign-in setup
+## Microsoft sign-in
 
-Signing in needs the client ID of an Azure application that Microsoft has approved for Minecraft. Scaleri doesn't ship
-anyone else's ID.
-
-1. Register a free app in the [Microsoft Entra admin center](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app)
-   as a public client with "Personal Microsoft accounts" enabled and *Allow public client flows* turned on.
-2. [Request Minecraft API access](https://aka.ms/mce-reviewappid) for it.
-3. Either paste the ID into *Settings → Microsoft sign-in*, or build it in: set the `SCALERI_MSA_CLIENT_ID` environment
-   variable when building, or add it as the `MSA_CLIENT_ID` repository secret for CI builds.
+Scaleri signs in with its own Azure application (`174db889-6412-4846-869e-faafd5a578d0`), which Microsoft has approved
+for the Minecraft services, so sign-in works out of the box. Builds can use a different approved application by setting
+the `SCALERI_MSA_CLIENT_ID` environment variable (or the `MSA_CLIENT_ID` repository secret in CI), and players can paste
+one into *Settings → Microsoft sign-in*.
 
 ## Building
 

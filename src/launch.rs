@@ -110,7 +110,7 @@ pub fn launch(instance: &Instance, account: &Account, settings: &Settings, progr
         format!("token:{}:{}", account.access_token, account.uuid),
     );
     vars.insert("auth_xuid", "0".into());
-    vars.insert("clientid", settings.client_id().unwrap_or_default());
+    vars.insert("clientid", settings.client_id());
     vars.insert(
         "user_type",
         if account.kind == AccountKind::Microsoft {

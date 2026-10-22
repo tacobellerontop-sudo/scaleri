@@ -9,7 +9,7 @@ use super::{art, modal_id, App, ManifestState};
 use crate::accounts::{self, Account, AccountKind};
 use crate::instances::{Instance, ICONS};
 use crate::paths;
-use crate::settings::{Settings, BUILT_IN_CLIENT_ID};
+use crate::settings::Settings;
 
 pub enum Dialog {
     NewInstance(NewInstanceForm),
@@ -451,12 +451,9 @@ fn settings(app: &mut App, ctx: &egui::Context, draft: &mut Settings) -> Outcome
             ui.add_space(10.0);
 
             section_title(ui, "MICROSOFT SIGN-IN");
-            let built_in = BUILT_IN_CLIENT_ID.is_some_and(|id| !id.trim().is_empty());
-            ui.label(if built_in {
-                "This build has a Microsoft application ID. You can override it here."
-            } else {
-                "Signing in needs the client ID of an Azure application with Minecraft access. See the README."
-            });
+            ui.label(
+                "Scaleri signs in with its own Microsoft application. Only paste an ID here to use a different one.",
+            );
             ui.add(
                 egui::TextEdit::singleline(&mut draft.msa_client_id)
                     .hint_text("Application (client) ID")

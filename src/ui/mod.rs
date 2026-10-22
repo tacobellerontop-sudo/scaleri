@@ -168,17 +168,7 @@ impl App {
     }
 
     pub fn start_sign_in(&mut self, ctx: &egui::Context) {
-        let Some(client_id) = self.settings.client_id() else {
-            self.login = Some(Login {
-                code: None,
-                progress: Arc::default(),
-                error: Some(
-                    "Microsoft sign-in needs an Azure application ID. Add one under Settings → Microsoft sign-in."
-                        .into(),
-                ),
-            });
-            return;
-        };
+        let client_id = self.settings.client_id();
         self.login = Some(Login {
             code: None,
             progress: Arc::default(),
@@ -194,7 +184,7 @@ impl App {
                 paths::open_url(&code.verification_uri);
                 login.code = Some(code.clone());
                 let progress = login.progress.clone();
-                let client_id = self.settings.client_id().unwrap_or_default();
+                let client_id = self.settings.client_id();
                 self.spawn(ctx, move || {
                     Msg::SignedIn(accounts::finish_device_code(&client_id, &code, &progress))
                 });
@@ -221,13 +211,6 @@ impl App {
             return;
         }
         let client_id = self.settings.client_id();
-        if account.needs_refresh() && client_id.is_none() {
-            self.notice = Some((
-                "Your sign-in expired and no Microsoft application ID is set (Settings).".into(),
-                true,
-            ));
-            return;
-        }
 
         let progress = Arc::new(Progress::default());
         self.task = Some(Task {
@@ -247,7 +230,7 @@ impl App {
             let mut account = account;
             if account.needs_refresh() {
                 progress.set_stage("Refreshing your Microsoft sign-in", 0);
-                match accounts::refresh(&client_id.unwrap_or_default(), &account) {
+                match accounts::refresh(&client_id, &account) {
                     Ok(fresh) => {
                         account = fresh.clone();
                         send(Msg::AccountRefreshed(fresh));
