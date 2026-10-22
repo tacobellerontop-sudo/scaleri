@@ -3,8 +3,9 @@
 mod art;
 mod dialogs;
 pub mod theme;
+mod titlebar;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
@@ -30,6 +31,8 @@ pub enum Msg {
     SignedIn(Result<Account>),
     AccountRefreshed(Account),
     Launched { instance: String, result: Result<()> },
+    InstanceUpdated(Instance),
+    Face { uuid: String, pixels: Result<Vec<u8>> },
     GameExited { instance: String, seconds: u64 },
 }
 
@@ -67,6 +70,8 @@ pub struct App {
     tx: Sender<Msg>,
     rx: Receiver<Msg>,
     logo: TextureHandle,
+    /// Players' faces from their real skins, by account UUID.
+    faces: HashMap<String, TextureHandle>,
 }
 
 impl App {
@@ -90,9 +95,35 @@ impl App {
             tx,
             rx,
             logo,
+            faces: HashMap::new(),
         };
         app.spawn(&cc.egui_ctx, || Msg::Manifest(versions::load_manifest()));
+        for account in &app.accounts.accounts {
+            app.fetch_face(&cc.egui_ctx, account);
+        }
         app
+    }
+
+    fn fetch_face(&self, ctx: &egui::Context, account: &Account) {
+        if account.kind != AccountKind::Microsoft {
+            return;
+        }
+        let uuid = account.uuid.clone();
+        self.spawn(ctx, move || Msg::Face {
+            pixels: accounts::fetch_face(&uuid),
+            uuid,
+        });
+    }
+
+    /// Draws an account's face: their real skin when it has loaded, a generated one otherwise.
+    pub fn paint_face(&self, painter: &egui::Painter, rect: Rect, account: &Account) {
+        match self.faces.get(&account.uuid) {
+            Some(texture) => {
+                let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+                painter.image(texture.id(), rect, uv, Color32::WHITE);
+            }
+            None => art::paint_head(painter, rect, &account.name),
+        }
     }
 
     /// Runs `job` on a background thread and delivers its result to the window.
@@ -118,6 +149,7 @@ impl App {
                 Msg::DeviceCode(result) => self.on_device_code(ctx, result),
                 Msg::SignedIn(result) => match result {
                     Ok(account) => {
+                        self.fetch_face(ctx, &account);
                         self.notice = Some((format!("Signed in as {}", account.name), false));
                         self.accounts.upsert(account);
                         self.accounts.save();
@@ -134,6 +166,21 @@ impl App {
                         }
                     }
                 },
+                Msg::InstanceUpdated(instance) => {
+                    if let Some(existing) = self.instances.iter_mut().find(|i| i.id == instance.id) {
+                        *existing = instance;
+                        let _ = existing.save();
+                    }
+                }
+                Msg::Face {
+                    uuid,
+                    pixels: Ok(pixels),
+                } => {
+                    let image = egui::ColorImage::from_rgba_unmultiplied([8, 8], &pixels);
+                    let texture = ctx.load_texture(format!("face-{uuid}"), image, egui::TextureOptions::NEAREST);
+                    self.faces.insert(uuid, texture);
+                }
+                Msg::Face { pixels: Err(_), .. } => {}
                 Msg::AccountRefreshed(account) => {
                     self.accounts.upsert(account);
                     self.accounts.save();
@@ -244,6 +291,18 @@ impl App {
                     }
                 }
             }
+            let mut instance = instance;
+            match launch::pin_loader_version(&mut instance, &progress) {
+                Ok(true) => send(Msg::InstanceUpdated(instance.clone())),
+                Ok(false) => {}
+                Err(e) => {
+                    send(Msg::Launched {
+                        instance: id,
+                        result: Err(e),
+                    });
+                    return;
+                }
+            }
             match launch::launch(&instance, &account, &settings, &progress) {
                 Ok(mut child) => {
                     let started = Instant::now();
@@ -265,6 +324,27 @@ impl App {
                 }),
             }
         });
+    }
+
+    fn title_status(&self) -> titlebar::Status {
+        let name_of = |id: &str| {
+            self.instances
+                .iter()
+                .find(|i| i.id == id)
+                .map(|i| i.name.clone())
+                .unwrap_or_default()
+        };
+        if let Some(task) = &self.task {
+            return titlebar::Status::Preparing {
+                name: name_of(&task.instance),
+                label: task.progress.label.lock().unwrap().clone(),
+                fraction: task.progress.fraction(),
+            };
+        }
+        match self.running.iter().next() {
+            Some(id) => titlebar::Status::Playing(name_of(id)),
+            None => titlebar::Status::Idle,
+        }
     }
 
     pub fn selected_instance(&self) -> Option<&Instance> {
@@ -295,14 +375,7 @@ impl App {
     // Layout
 
     fn sidebar(&mut self, ui: &mut Ui) {
-        ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            ui.add_space(4.0);
-            ui.add(egui::Image::new(&self.logo).fit_to_exact_size(Vec2::splat(36.0)));
-            ui.add_space(4.0);
-            ui.label(RichText::new("SCALERI").font(bold_font(21.0)).color(theme::GREEN_LIGHT));
-        });
-        ui.add_space(18.0);
+        ui.add_space(6.0);
 
         let nav = [
             (Some(art::Glyph::Plus), "New Instance"),
@@ -344,7 +417,7 @@ impl App {
         let head = Rect::from_min_size(rect.min + Vec2::new(10.0, 10.0), Vec2::splat(32.0));
         match self.accounts.active() {
             Some(account) => {
-                art::paint_head(p, head, &account.name);
+                self.paint_face(p, head, account);
                 p.text(
                     pos2(head.max.x + 10.0, rect.min.y + 17.0),
                     egui::Align2::LEFT_CENTER,
@@ -449,7 +522,10 @@ impl App {
                         .font(bold_font(30.0))
                         .color(Color32::WHITE),
                 );
-                ui.label(RichText::new(format!("Minecraft {}", instance.version)).color(theme::TEXT));
+                ui.label(RichText::new(instance.version_text()).color(theme::TEXT));
+                if !instance.server.trim().is_empty() {
+                    ui.label(RichText::new(format!("Joins {}", instance.server.trim())).color(theme::GREEN_LIGHT));
+                }
                 let status = if self.running.contains(&instance.id) {
                     "Playing now".to_string()
                 } else {
@@ -478,9 +554,11 @@ impl App {
                 if block_button(ui, "Edit", ButtonKind::Stone, Vec2::new(90.0, 50.0), bold_font(14.0)).clicked() {
                     self.dialog = Some(Dialog::edit(&instance));
                 }
-                if block_button(ui, "Folder", ButtonKind::Stone, Vec2::new(90.0, 50.0), bold_font(14.0)).clicked() {
-                    paths::open_in_explorer(&instance.game_dir());
-                }
+                let more = block_button(ui, "More", ButtonKind::Stone, Vec2::new(100.0, 50.0), bold_font(14.0));
+                egui::Popup::menu(&more).show(|ui| {
+                    ui.set_min_width(190.0);
+                    self.instance_menu(ui, &instance);
+                });
             }
         });
     }
@@ -621,7 +699,10 @@ impl App {
         ui.painter().text(
             pos2(rect.center().x, (name_pos.y + name_height + 9.0).min(rect.max.y - 9.0)),
             egui::Align2::CENTER_CENTER,
-            &instance.version,
+            match &instance.loader {
+                Some(loader) => format!("{} · {}", instance.version, loader.kind.name()),
+                None => instance.version.clone(),
+            },
             egui::FontId::proportional(12.0),
             theme::MUTED,
         );
@@ -633,6 +714,7 @@ impl App {
             self.play(ui.ctx(), &instance.id);
         }
         response.context_menu(|ui| {
+            ui.set_min_width(190.0);
             if ui.button("Play").clicked() {
                 self.play(ui.ctx(), &instance.id);
                 ui.close();
@@ -641,16 +723,51 @@ impl App {
                 self.dialog = Some(Dialog::edit(instance));
                 ui.close();
             }
-            if ui.button("Open folder").clicked() {
-                paths::open_in_explorer(&instance.game_dir());
-                ui.close();
-            }
             ui.separator();
-            if ui.button("Delete").clicked() {
-                self.dialog = Some(Dialog::ConfirmDelete(instance.id.clone()));
-                ui.close();
-            }
+            self.instance_menu(ui, instance);
         });
+    }
+
+    /// Folders, the game log, duplicating and deleting: shared by the More button and right-click.
+    fn instance_menu(&mut self, ui: &mut Ui, instance: &Instance) {
+        if ui.button("Open game folder").clicked() {
+            paths::open_in_explorer(&instance.game_dir());
+            ui.close();
+        }
+        if instance.loader.is_some() && ui.button("Open mods folder").clicked() {
+            paths::open_in_explorer(&instance.mods_dir());
+            ui.close();
+        }
+        if ui.button("Open screenshots").clicked() {
+            paths::open_in_explorer(&instance.screenshots_dir());
+            ui.close();
+        }
+        let log = instance.log_path();
+        if ui
+            .add_enabled(log.exists(), egui::Button::new("View last game log"))
+            .clicked()
+        {
+            paths::open_file(&log);
+            ui.close();
+        }
+        ui.separator();
+        if ui.button("Duplicate").clicked() {
+            match instance.duplicate() {
+                Ok(copy) => {
+                    self.notice = Some((format!("Made a copy called {}", copy.name), false));
+                    self.add_instance(copy);
+                }
+                Err(e) => self.notice = Some((format!("Could not copy {}: {e}", instance.name), true)),
+            }
+            ui.close();
+        }
+        if ui
+            .button(RichText::new("Delete").color(Color32::from_rgb(0xff, 0x8a, 0x80)))
+            .clicked()
+        {
+            self.dialog = Some(Dialog::ConfirmDelete(instance.id.clone()));
+            ui.close();
+        }
     }
 
     fn notice_bar(&mut self, ui: &mut Ui) {
@@ -735,6 +852,21 @@ impl eframe::App for App {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         self.handle_messages(&ctx);
+        titlebar::resize_edges(&ctx);
+
+        egui::Panel::top("titlebar")
+            .exact_size(titlebar::HEIGHT)
+            .resizable(false)
+            .show_separator_line(false)
+            .frame(egui::Frame::new())
+            .show(ui, |ui| {
+                let status = self.title_status();
+                let latest = match &self.manifest {
+                    ManifestState::Ready(m) => Some(m.latest.release.as_str()),
+                    _ => None,
+                };
+                titlebar::show(ui, &self.logo, &status, latest);
+            });
 
         egui::Panel::left("sidebar")
             .resizable(false)

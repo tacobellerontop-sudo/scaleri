@@ -7,6 +7,7 @@ mod accounts;
 mod instances;
 mod java;
 mod launch;
+mod loaders;
 mod net;
 mod paths;
 mod settings;
@@ -19,8 +20,10 @@ fn main() -> eframe::Result {
             .with_title("Scaleri")
             .with_app_id("scaleri")
             .with_inner_size([1180.0, 740.0])
-            .with_min_inner_size([900.0, 600.0])
-            .with_icon(ui::window_icon()),
+            .with_min_inner_size([960.0, 720.0])
+            .with_icon(ui::window_icon())
+            // Scaleri draws its own title bar
+            .with_decorations(false),
         ..Default::default()
     };
     eframe::run_native("Scaleri", options, Box::new(|cc| Ok(Box::new(ui::App::new(cc)))))

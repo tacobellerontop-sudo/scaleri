@@ -12,7 +12,7 @@ use crate::instances::Instance;
 use crate::net::{self, Progress, Result};
 use crate::settings::Settings;
 use crate::versions::{self, AssetIndex, Version};
-use crate::{java, paths};
+use crate::{java, loaders, paths};
 
 /// Loads the version JSON, downloading it (and the version list) only if it's missing.
 pub fn resolve_version(id: &str) -> Result<Version> {
@@ -28,10 +28,28 @@ pub fn resolve_version(id: &str) -> Result<Version> {
     Version::fetch(entry)
 }
 
+/// Picks the latest stable loader version for an instance that hasn't got one yet.
+/// Returns true when the instance changed and should be saved.
+pub fn pin_loader_version(instance: &mut Instance, progress: &Progress) -> Result<bool> {
+    let Some(loader) = instance.loader.as_mut() else {
+        return Ok(false);
+    };
+    if !loader.version.is_empty() {
+        return Ok(false);
+    }
+    progress.set_stage(format!("Finding the latest {}", loader.kind.name()), 0);
+    loader.version = loaders::latest_version(loader.kind, &instance.version)?;
+    Ok(true)
+}
+
 /// Downloads everything the instance needs and starts the game. Returns the running game process.
 pub fn launch(instance: &Instance, account: &Account, settings: &Settings, progress: &Arc<Progress>) -> Result<Child> {
     progress.set_stage(format!("Loading Minecraft {}", instance.version), 0);
-    let version = resolve_version(&instance.version)?;
+    let mut version = resolve_version(&instance.version)?;
+    if let Some(loader) = &instance.loader {
+        progress.set_stage(format!("Loading {} {}", loader.kind.name(), loader.version), 0);
+        version = loaders::apply(version, loader)?;
+    }
     progress.cancelled()?;
 
     // Java
@@ -171,6 +189,7 @@ pub fn launch(instance: &Instance, account: &Account, settings: &Settings, progr
         "--height".into(),
         settings.game_height.to_string(),
     ]);
+    args.extend(join_server_args(&version, &instance.server));
 
     progress.set_stage("Starting Minecraft", 0);
     let log = std::fs::File::create(instance.log_path()).map_err(|e| format!("Could not create the game log: {e}"))?;
@@ -195,6 +214,27 @@ pub fn launch(instance: &Instance, account: &Account, settings: &Settings, progr
     command
         .spawn()
         .map_err(|e| format!("Could not start Java ({}): {e}", java.display()))
+}
+
+/// Arguments that make the game join `server` straight away. 1.20 and newer use Quick Play;
+/// older versions take `--server` and `--port`.
+fn join_server_args(version: &Version, server: &str) -> Vec<String> {
+    let server = server.trim();
+    if server.is_empty() {
+        return Vec::new();
+    }
+    let quick_play = version
+        .arguments
+        .as_ref()
+        .is_some_and(|a| a.game.iter().any(|v| v.to_string().contains("quickPlayMultiplayer")));
+    if quick_play {
+        return vec!["--quickPlayMultiplayer".into(), server.into()];
+    }
+    let (host, port) = match server.rsplit_once(':') {
+        Some((host, port)) if port.parse::<u16>().is_ok() => (host, port),
+        _ => (server, "25565"),
+    };
+    vec!["--server".into(), host.into(), "--port".into(), port.into()]
 }
 
 fn substitute(arg: &str, vars: &HashMap<&str, String>) -> String {
@@ -312,6 +352,35 @@ fn prepare_legacy_assets(version: &Version, index: &AssetIndex, instance: &Insta
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn version(game_args: &str) -> Version {
+        serde_json::from_str(&format!(
+            r#"{{"id":"x","mainClass":"m","arguments":{{"game":{game_args},"jvm":[]}},
+                "assetIndex":{{"id":"1","url":"u","sha1":"s"}},"downloads":{{}}}}"#
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn join_server_uses_quick_play_when_available() {
+        let modern = version(
+            r#"[{"rules":[{"action":"allow","features":{"is_quick_play_multiplayer":true}}],"value":["--quickPlayMultiplayer","${quickPlayMultiplayer}"]}]"#,
+        );
+        assert_eq!(
+            join_server_args(&modern, "play.example.net"),
+            ["--quickPlayMultiplayer", "play.example.net"]
+        );
+        let old = version("[]");
+        assert_eq!(
+            join_server_args(&old, "mc.example.net:25570"),
+            ["--server", "mc.example.net", "--port", "25570"]
+        );
+        assert_eq!(
+            join_server_args(&old, "mc.example.net"),
+            ["--server", "mc.example.net", "--port", "25565"]
+        );
+        assert!(join_server_args(&old, " ").is_empty());
+    }
 
     #[test]
     fn substitutes_known_variables_only() {

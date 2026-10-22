@@ -295,6 +295,68 @@ fn minecraft_account(ms_access_token: &str, refresh_token: String) -> Result<Acc
     })
 }
 
+// ---------------------------------------------------------------------------------------------
+// Skins
+
+/// The player's face from their skin, with the hat layer on top, as 8×8 RGBA pixels.
+/// The skin is cached so the face still shows when offline.
+pub fn fetch_face(uuid: &str) -> Result<Vec<u8>> {
+    let cache = paths::data_dir().join("skins").join(format!("{uuid}.png"));
+    let skin = match download_skin(uuid) {
+        Ok(png) => {
+            let _ = paths::write_atomic(&cache, &png);
+            png
+        }
+        Err(e) => std::fs::read(&cache).map_err(|_| e)?,
+    };
+    face_from_skin(&skin)
+}
+
+fn download_skin(uuid: &str) -> Result<Vec<u8>> {
+    use base64::Engine;
+    let profile: Value = net::get_json(&format!(
+        "https://sessionserver.mojang.com/session/minecraft/profile/{uuid}"
+    ))?;
+    let encoded = profile["properties"]
+        .as_array()
+        .and_then(|props| props.iter().find(|p| p["name"] == "textures"))
+        .and_then(|p| p["value"].as_str())
+        .ok_or("This profile has no skin")?;
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .map_err(|e| format!("Unreadable skin data: {e}"))?;
+    let textures: Value = serde_json::from_slice(&decoded).map_err(|e| format!("Unreadable skin data: {e}"))?;
+    let url = textures["textures"]["SKIN"]["url"]
+        .as_str()
+        .ok_or("This profile uses the default skin")?
+        .replace("http://", "https://");
+    let mut res = net::agent()
+        .get(&url)
+        .call()
+        .map_err(|e| format!("Could not download the skin: {e}"))?;
+    res.body_mut()
+        .read_to_vec()
+        .map_err(|e| format!("Could not download the skin: {e}"))
+}
+
+fn face_from_skin(png: &[u8]) -> Result<Vec<u8>> {
+    let skin = image::load_from_memory(png)
+        .map_err(|e| format!("Unreadable skin: {e}"))?
+        .to_rgba8();
+    if skin.width() < 64 || skin.height() < 32 {
+        return Err("Unexpected skin size".into());
+    }
+    let mut face = Vec::with_capacity(8 * 8 * 4);
+    for y in 0..8 {
+        for x in 0..8 {
+            let base = skin.get_pixel(8 + x, 8 + y).0;
+            let hat = skin.get_pixel(40 + x, 8 + y).0;
+            face.extend_from_slice(if hat[3] > 0 { &hat } else { &base });
+        }
+    }
+    Ok(face)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,6 +365,19 @@ mod tests {
     fn offline_uuid_matches_minecraft() {
         // The UUID the vanilla server gives the offline player "Notch"
         assert_eq!(offline_uuid("Notch"), "b50ad385829d3141a2167e7d7539ba7f");
+    }
+
+    #[test]
+    fn face_uses_the_hat_layer_on_top() {
+        let mut skin = image::RgbaImage::new(64, 64);
+        skin.put_pixel(8, 8, image::Rgba([10, 20, 30, 255]));
+        skin.put_pixel(9, 8, image::Rgba([1, 2, 3, 255]));
+        skin.put_pixel(41, 8, image::Rgba([200, 0, 0, 255]));
+        let mut png = Vec::new();
+        skin.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+        let face = face_from_skin(&png).unwrap();
+        assert_eq!(&face[0..4], &[10, 20, 30, 255]);
+        assert_eq!(&face[4..8], &[200, 0, 0, 255]);
     }
 
     #[test]

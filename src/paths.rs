@@ -66,6 +66,22 @@ pub fn open_in_explorer(path: &std::path::Path) {
     let _ = std::process::Command::new(program).arg(path).spawn();
 }
 
+/// Opens a file with its default app, e.g. a log in Notepad.
+pub fn open_file(path: &std::path::Path) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let _ = std::process::Command::new("rundll32")
+            .arg("url.dll,FileProtocolHandler")
+            .arg(path)
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn();
+    }
+    #[cfg(not(windows))]
+    open_in_explorer(path);
+}
+
 /// Opens a web page in the default browser.
 pub fn open_url(url: &str) {
     #[cfg(windows)]

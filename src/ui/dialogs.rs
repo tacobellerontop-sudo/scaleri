@@ -8,6 +8,7 @@ use super::theme::{self, block_button, bold_font, section_title, ButtonKind};
 use super::{art, modal_id, App, ManifestState};
 use crate::accounts::{self, Account, AccountKind};
 use crate::instances::{Instance, ICONS};
+use crate::loaders::{Loader, LoaderKind};
 use crate::paths;
 use crate::settings::Settings;
 
@@ -36,6 +37,9 @@ impl Dialog {
             custom_memory: instance.memory_mb.is_some(),
             memory_mb: instance.memory_mb.unwrap_or(4096),
             snapshots: false,
+            loader: instance.loader.as_ref().map(|l| l.kind),
+            server: instance.server.clone(),
+            filter: String::new(),
         })
     }
 }
@@ -48,6 +52,7 @@ pub struct NewInstanceForm {
     icon: String,
     snapshots: bool,
     filter: String,
+    loader: Option<LoaderKind>,
 }
 
 pub struct EditForm {
@@ -58,6 +63,9 @@ pub struct EditForm {
     custom_memory: bool,
     memory_mb: u32,
     snapshots: bool,
+    loader: Option<LoaderKind>,
+    server: String,
+    filter: String,
 }
 
 pub struct AccountsForm {
@@ -150,6 +158,31 @@ fn icon_picker(ui: &mut Ui, selected: &mut String) {
     });
 }
 
+/// None, Fabric or Quilt, as a row of block buttons.
+fn loader_picker(ui: &mut Ui, selected: &mut Option<LoaderKind>) {
+    ui.horizontal(|ui| {
+        let options = std::iter::once(None).chain(LoaderKind::ALL.into_iter().map(Some));
+        for option in options {
+            let label = option.map_or("None (vanilla)", LoaderKind::name);
+            let kind = if *selected == option {
+                ButtonKind::Green
+            } else {
+                ButtonKind::Stone
+            };
+            if block_button(ui, label, kind, Vec2::new(130.0, 34.0), bold_font(13.0)).clicked() {
+                *selected = option;
+            }
+        }
+    });
+    if selected.is_some() {
+        ui.label(
+            RichText::new("Put mods in the instance's mods folder (the More menu has a shortcut to it). The latest stable loader is installed on first launch.")
+                .small()
+                .color(theme::MUTED),
+        );
+    }
+}
+
 /// The version list with a search box and a snapshot toggle. Returns the clicked version.
 fn version_picker(
     app: &mut App,
@@ -157,6 +190,7 @@ fn version_picker(
     selected: Option<&str>,
     snapshots: &mut bool,
     filter: &mut String,
+    list_height: f32,
 ) -> Option<String> {
     let mut picked = None;
     ui.horizontal(|ui| {
@@ -189,7 +223,7 @@ fn version_picker(
     let query = filter.trim().to_lowercase();
     theme::field_frame().inner_margin(0).show(ui, |ui| {
         egui::ScrollArea::vertical()
-            .max_height(230.0)
+            .max_height(list_height)
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = 0.0;
@@ -306,13 +340,31 @@ fn new_instance(app: &mut App, ctx: &egui::Context, form: &mut NewInstanceForm) 
         icon_picker(ui, &mut form.icon);
         ui.add_space(6.0);
         section_title(ui, "MINECRAFT VERSION");
-        if let Some(v) = version_picker(app, ui, form.version.as_deref(), &mut form.snapshots, &mut form.filter) {
+        if let Some(v) = version_picker(
+            app,
+            ui,
+            form.version.as_deref(),
+            &mut form.snapshots,
+            &mut form.filter,
+            200.0,
+        ) {
             form.version = Some(v);
         }
+        ui.add_space(6.0);
+        section_title(ui, "MOD LOADER");
+        loader_picker(ui, &mut form.loader);
         let ready = form.version.is_some() && !form.name.trim().is_empty();
         let (ok, cancel) = footer(ui, "Create", ready, ButtonKind::Green);
         if ok {
-            match Instance::create(&form.name, form.version.as_deref().unwrap_or_default(), &form.icon) {
+            let created = Instance::create(&form.name, form.version.as_deref().unwrap_or_default(), &form.icon)
+                .and_then(|mut instance| {
+                    instance.loader = form.loader.map(|kind| Loader {
+                        kind,
+                        version: String::new(),
+                    });
+                    instance.save().map(|()| instance)
+                });
+            match created {
                 Ok(instance) => app.add_instance(instance),
                 Err(e) => app.notice = Some((format!("Could not create the instance: {e}"), true)),
             }
@@ -339,10 +391,27 @@ fn edit_instance(app: &mut App, ctx: &egui::Context, form: &mut EditForm) -> Out
         icon_picker(ui, &mut form.icon);
         ui.add_space(6.0);
         section_title(ui, &format!("MINECRAFT VERSION · {}", form.version));
-        let mut filter = String::new();
-        if let Some(v) = version_picker(app, ui, Some(&form.version), &mut form.snapshots, &mut filter) {
+        if let Some(v) = version_picker(
+            app,
+            ui,
+            Some(&form.version),
+            &mut form.snapshots,
+            &mut form.filter,
+            130.0,
+        ) {
             form.version = v;
         }
+        ui.add_space(6.0);
+        section_title(ui, "MOD LOADER");
+        loader_picker(ui, &mut form.loader);
+        ui.add_space(6.0);
+        section_title(ui, "JOIN A SERVER ON LAUNCH");
+        ui.add(
+            egui::TextEdit::singleline(&mut form.server)
+                .hint_text("e.g. play.example.net or 192.168.1.20:25565 (leave empty for the title screen)")
+                .desired_width(f32::INFINITY)
+                .margin(Vec2::new(8.0, 6.0)),
+        );
         ui.add_space(6.0);
         section_title(ui, "MEMORY");
         ui.checkbox(
@@ -372,7 +441,17 @@ fn edit_instance(app: &mut App, ctx: &egui::Context, form: &mut EditForm) -> Out
                 if let Some(inst) = app.instances.iter_mut().find(|i| i.id == form.id) {
                     inst.name = form.name.trim().to_string();
                     inst.icon = form.icon.clone();
+                    // A different game version or loader needs a fresh loader version
+                    let same_loader =
+                        inst.version == form.version && inst.loader.as_ref().map(|l| l.kind) == form.loader;
+                    if !same_loader {
+                        inst.loader = form.loader.map(|kind| Loader {
+                            kind,
+                            version: String::new(),
+                        });
+                    }
                     inst.version = form.version.clone();
+                    inst.server = form.server.trim().to_string();
                     inst.memory_mb = form.custom_memory.then_some(form.memory_mb);
                     if let Err(e) = inst.save() {
                         app.notice = Some((format!("Could not save the instance: {e}"), true));
@@ -483,7 +562,7 @@ fn settings(app: &mut App, ctx: &egui::Context, draft: &mut Settings) -> Outcome
     })
 }
 
-fn account_row(ui: &mut Ui, account: &Account, active: bool) -> (bool, bool) {
+fn account_row(ui: &mut Ui, app: &App, account: &Account, active: bool) -> (bool, bool) {
     let mut use_it = false;
     let mut remove = false;
     let fill = if active {
@@ -498,7 +577,7 @@ fn account_row(ui: &mut Ui, account: &Account, active: bool) -> (bool, bool) {
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 let (head, _) = ui.allocate_exact_size(Vec2::splat(36.0), Sense::hover());
-                art::paint_head(ui.painter(), head, &account.name);
+                app.paint_face(ui.painter(), head, account);
                 ui.vertical(|ui| {
                     ui.label(RichText::new(&account.name).font(bold_font(15.0)));
                     let kind = match account.kind {
@@ -537,7 +616,7 @@ fn accounts_dialog(app: &mut App, ctx: &egui::Context, form: &mut AccountsForm) 
         let mut use_id = None;
         let mut remove_id = None;
         for account in &app.accounts.accounts {
-            let (use_it, remove) = account_row(ui, account, active.as_deref() == Some(account.uuid.as_str()));
+            let (use_it, remove) = account_row(ui, app, account, active.as_deref() == Some(account.uuid.as_str()));
             if use_it {
                 use_id = Some(account.uuid.clone());
             }

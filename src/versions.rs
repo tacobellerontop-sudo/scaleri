@@ -142,6 +142,11 @@ pub struct Library {
     pub natives: Option<HashMap<String, String>>,
     #[serde(default)]
     pub url: Option<String>,
+    /// Checksum and size given by mod loader profiles, which have no `downloads` section.
+    #[serde(default)]
+    pub sha1: Option<String>,
+    #[serde(default)]
+    pub size: Option<u64>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -281,8 +286,8 @@ impl Library {
         Some(Download {
             url: format!("{}/{}", base.trim_end_matches('/'), path),
             path: paths::libraries_dir().join(path),
-            sha1: None,
-            size: None,
+            sha1: self.sha1.clone(),
+            size: self.size,
             executable: false,
         })
     }
@@ -470,6 +475,8 @@ mod tests {
             rules: None,
             natives: None,
             url: None,
+            sha1: None,
+            size: None,
         };
         assert_eq!(
             lib.maven_path().unwrap(),

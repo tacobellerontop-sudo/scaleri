@@ -5,6 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
+use crate::loaders::Loader;
 use crate::paths;
 
 /// Block icons Scaleri can draw for an instance.
@@ -40,6 +41,12 @@ pub struct Instance {
     /// Overrides the global memory setting when set.
     #[serde(default)]
     pub memory_mb: Option<u32>,
+    /// Fabric or Quilt, if the instance uses a mod loader.
+    #[serde(default)]
+    pub loader: Option<Loader>,
+    /// A server (`host` or `host:port`) to join as soon as the game starts.
+    #[serde(default)]
+    pub server: String,
 }
 
 fn default_icon() -> String {
@@ -73,29 +80,8 @@ impl Instance {
     }
 
     pub fn create(name: &str, version: &str, icon: &str) -> std::io::Result<Instance> {
-        let base: String = name
-            .chars()
-            .map(|c| {
-                if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
-                    c
-                } else {
-                    '_'
-                }
-            })
-            .collect();
-        let base = if base.trim_matches('_').is_empty() {
-            "instance".to_string()
-        } else {
-            base
-        };
-        let mut id = base.clone();
-        let mut n = 2;
-        while paths::instances_dir().join(&id).exists() {
-            id = format!("{base}_{n}");
-            n += 1;
-        }
         let instance = Instance {
-            id,
+            id: unused_id(name),
             name: name.trim().to_string(),
             version: version.to_string(),
             icon: icon.to_string(),
@@ -103,14 +89,90 @@ impl Instance {
             last_played: None,
             play_seconds: 0,
             memory_mb: None,
+            loader: None,
+            server: String::new(),
         };
         std::fs::create_dir_all(instance.game_dir())?;
         instance.save()?;
         Ok(instance)
     }
 
+    /// Copies the instance, worlds and all, under the name "<name> (copy)".
+    pub fn duplicate(&self) -> std::io::Result<Instance> {
+        let name = format!("{} (copy)", self.name);
+        let copy = Instance {
+            id: unused_id(&name),
+            name,
+            created: now(),
+            last_played: None,
+            play_seconds: 0,
+            ..self.clone()
+        };
+        copy_dir(&self.game_dir(), &copy.game_dir())?;
+        copy.save()?;
+        Ok(copy)
+    }
+
+    pub fn mods_dir(&self) -> PathBuf {
+        self.game_dir().join("mods")
+    }
+
+    pub fn screenshots_dir(&self) -> PathBuf {
+        self.game_dir().join("screenshots")
+    }
+}
+
+/// A folder name under `instances/` that isn't taken yet.
+fn unused_id(name: &str) -> String {
+    let base: String = name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let base = if base.trim_matches('_').is_empty() {
+        "instance".to_string()
+    } else {
+        base
+    };
+    let mut id = base.clone();
+    let mut n = 2;
+    while paths::instances_dir().join(&id).exists() {
+        id = format!("{base}_{n}");
+        n += 1;
+    }
+    id
+}
+
+fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let target = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), target)?;
+        }
+    }
+    Ok(())
+}
+
+impl Instance {
     pub fn delete(&self) -> std::io::Result<()> {
         std::fs::remove_dir_all(self.dir())
+    }
+
+    /// "Minecraft 1.21.4 with Fabric" style summary.
+    pub fn version_text(&self) -> String {
+        match &self.loader {
+            Some(loader) => format!("Minecraft {} with {}", self.version, loader.kind.name()),
+            None => format!("Minecraft {}", self.version),
+        }
     }
 
     /// "Played 3h 20m" style summary.

@@ -7,6 +7,7 @@ use egui::{
 
 pub const BG: Color32 = Color32::from_rgb(0x1e, 0x1e, 0x1f);
 pub const PANEL: Color32 = Color32::from_rgb(0x26, 0x26, 0x27);
+pub const TITLEBAR: Color32 = Color32::from_rgb(0x12, 0x12, 0x13);
 pub const SIDEBAR: Color32 = Color32::from_rgb(0x18, 0x18, 0x19);
 pub const EDGE: Color32 = Color32::from_rgb(0x10, 0x10, 0x11);
 pub const FIELD: Color32 = Color32::from_rgb(0x14, 0x14, 0x15);

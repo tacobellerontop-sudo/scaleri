@@ -21,18 +21,26 @@
   launcher does.
 - **Microsoft sign-in.** Sign in with a code in your browser; Scaleri keeps you signed in. Offline accounts are available
   once a Microsoft account that owns the game has been added.
+- **Fabric and Quilt.** Pick a mod loader when you create or edit an instance; Scaleri installs the latest stable loader
+  on first launch. Drop mods into the instance's mods folder (More → Open mods folder).
+- **Join a server on launch.** Give an instance a server address and the game connects straight to it (Quick Play on
+  1.20+, `--server` on older versions).
+- **Your real skin.** Accounts show the face from your Minecraft skin, hat layer included.
+- **Instance tools.** Duplicate an instance with its worlds, open its game, mods or screenshots folder, or view the last
+  game log, from the More button or a right-click.
+- **Its own title bar.** A custom Minecraft-styled title bar shows the latest release, launch progress and what you're
+  playing. Drag it to move the window, double-click to maximise, and resize from any edge.
 - **Light in the background.** By default Scaleri closes as soon as the game starts, so it uses no memory while you play.
   Choose *Keep Scaleri open* in Settings if you'd rather keep it running to track play time. The launcher itself is a
   single ~6 MB executable with no installer.
 
 <p align="center">
   <img alt="New instance" src="docs/new-instance.png" width="42%">
-  <img alt="Accounts" src="docs/accounts.png" width="42%">
+  <img alt="Edit instance" src="docs/edit-instance.png" width="42%">
 </p>
 
 Scaleri started as a restyled fork of [Prism Launcher](https://github.com/PrismLauncher/PrismLauncher) and was then
-rewritten from scratch in Rust. Mod loaders (Fabric, Quilt, Forge, NeoForge), modpacks and a mod browser aren't in the
-Rust version yet.
+rewritten from scratch in Rust. Forge, NeoForge, modpacks and a mod browser aren't in the Rust version yet.
 
 ## Microsoft sign-in
 
@@ -69,6 +77,7 @@ runtimes\                           Java runtimes from Mojang
 | `src/accounts.rs` | Accounts and the Microsoft → Xbox Live → Minecraft sign-in |
 | `src/versions.rs` | Mojang's version list, version files, library rules and assets |
 | `src/java.rs` | Downloading Mojang's Java runtimes |
+| `src/loaders.rs` | Fabric and Quilt profiles layered on top of the vanilla version |
 | `src/launch.rs` | Downloading what an instance needs, building the command line and starting the game |
 | `src/net.rs` | HTTP, verified downloads and the parallel download queue |
 | `src/ui/` | The window: home screen, dialogs, theme and the procedural pixel art |
