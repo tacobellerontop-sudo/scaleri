@@ -374,7 +374,8 @@ mod tests {
         skin.put_pixel(9, 8, image::Rgba([1, 2, 3, 255]));
         skin.put_pixel(41, 8, image::Rgba([200, 0, 0, 255]));
         let mut png = Vec::new();
-        skin.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).unwrap();
+        let mut cursor = std::io::Cursor::new(&mut png);
+        skin.write_to(&mut cursor, image::ImageFormat::Png).unwrap();
         let face = face_from_skin(&png).unwrap();
         assert_eq!(&face[0..4], &[10, 20, 30, 255]);
         assert_eq!(&face[4..8], &[200, 0, 0, 255]);
