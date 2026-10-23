@@ -1,114 +1,98 @@
 <p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo-darkmode.svg">
-  <source media="(prefers-color-scheme: light)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo.svg">
-  <img alt="Prism Launcher" src="/program_info/org.prismlauncher.PrismLauncher.logo.svg" width="40%">
-</picture>
+  <img alt="Scaleri" src="assets/logo.png" width="96">
+</p>
+
+<h1 align="center">Scaleri</h1>
+
+<p align="center">
+  A lightweight Minecraft: Java Edition launcher for Windows, written in Rust.
 </p>
 
 <p align="center">
-  Prism Launcher is a custom launcher for Minecraft that allows you to easily manage multiple installations of Minecraft at once.<br />
-  <br />This is a <b>fork</b> of the MultiMC Launcher and is <b>not</b> endorsed by it.
+  <img alt="Scaleri home screen" src="docs/home.png" width="85%">
 </p>
 
-## Installation
+## What it does
 
-<a href="https://repology.org/project/prismlauncher/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/prismlauncher.svg" alt="Packaging status" align="right">
-</a>
+- **Instances.** Keep separate Minecraft installations, each with its own version, worlds, settings, icon and memory.
+- **Every vanilla version.** Pick any release, snapshot, beta or alpha from Mojang's version list. Scaleri downloads the
+  game, its libraries and assets, and checks every file against Mojang's checksums.
+- **No Java install needed.** Scaleri downloads the Java runtime each version needs from Mojang, like the official
+  launcher does.
+- **Microsoft sign-in.** Sign in with a code in your browser; Scaleri keeps you signed in. Offline accounts are available
+  once a Microsoft account that owns the game has been added.
+- **Fabric and Quilt.** Pick a mod loader when you create or edit an instance; Scaleri installs the latest stable loader
+  on first launch. Drop mods into the instance's mods folder (More → Open mods folder).
+- **Join a server on launch.** Give an instance a server address and the game connects straight to it (Quick Play on
+  1.20+, `--server` on older versions).
+- **Your real skin.** Accounts show the face from your Minecraft skin, hat layer included.
+- **Skin editor.** Paint straight onto a 3D player you can turn and zoom, or onto the flat texture. It has a pencil,
+  eraser, fill, colour picker and shading, the hat and jacket layer, mirrored painting, classic and slim arms, and
+  undo. Start from your current skin or drop in any skin PNG, keep skins in your library, and press *Wear in
+  Minecraft* to upload one to your account.
+- **Instance tools.** Duplicate an instance with its worlds, open its game, mods or screenshots folder, or view the last
+  game log, from the More button or a right-click.
+- **Its own title bar.** A custom Minecraft-styled title bar shows the latest release, launch progress and what you're
+  playing. Drag it to move the window, double-click to maximise, and resize from any edge.
+- **Light in the background.** By default Scaleri closes as soon as the game starts, so it uses no memory while you play.
+  Choose *Keep Scaleri open* in Settings if you'd rather keep it running to track play time. The launcher itself is a
+  single ~6 MB executable with no installer.
 
-- All downloads and instructions for Prism Launcher can be found on our [Website](https://prismlauncher.org/download).
-- Last build status can be found in the [GitHub Actions](https://github.com/PrismLauncher/PrismLauncher/actions) tab (this also includes the pull requests status).
+<p align="center">
+  <img alt="Skin editor" src="docs/skin-editor.png" width="85%">
+</p>
 
-### Development Builds
+<p align="center">
+  <img alt="New instance" src="docs/new-instance.png" width="42%">
+  <img alt="Edit instance" src="docs/edit-instance.png" width="42%">
+</p>
 
-Please understand that these builds are not intended for most users. There may be bugs, and other instabilities. You have been warned.
+Scaleri started as a restyled fork of [Prism Launcher](https://github.com/PrismLauncher/PrismLauncher) and was then
+rewritten from scratch in Rust. Forge, NeoForge, modpacks and a mod browser aren't in the Rust version yet.
 
-There are development builds available through:
+## Microsoft sign-in
 
-- [GitHub Actions](https://github.com/PrismLauncher/PrismLauncher/actions) (includes builds from pull requests opened by contributors)
-- [nightly.link](https://prismlauncher.org/nightly) (this will always point only to the latest version of develop)
-
-These have debug information in the binaries, so their file sizes are relatively larger.
-
-Prebuilt Development builds are provided for **Linux**, **Windows** and **macOS**.
-
-On Linux, we also offer our own [Flatpak nightly repository](https://github.com/PrismLauncher/flatpak). Most software centers are able to install it by opening [this link](https://flatpak.prismlauncher.org/prismlauncher-nightly.flatpakref).
-
-## Community & Support
-
-Feel free to create a GitHub issue if you find a bug or want to suggest a new feature. We have multiple community spaces where other community members can help you:
-
-- **Our Discord server:**
-
-[![Prism Launcher Discord server](https://discordapp.com/api/guilds/1031648380885147709/widget.png?style=banner3)](https://prismlauncher.org/discord)
-
-- **Our Matrix space:**
-
-[![Prism Launcher Space](https://img.shields.io/matrix/prismlauncher:matrix.org?style=for-the-badge&label=Matrix%20Space&logo=matrix&color=purple)](https://prismlauncher.org/matrix)
-
-- **Our Subreddit:**
-
-[![r/PrismLauncher](https://img.shields.io/reddit/subreddit-subscribers/prismlauncher?style=for-the-badge&logo=reddit)](https://prismlauncher.org/reddit)
-
-## Translations
-
-The translation effort for Prism Launcher is hosted on [Weblate](https://hosted.weblate.org/projects/prismlauncher/launcher/) and information about translating Prism Launcher is available at <https://github.com/PrismLauncher/Translations>.
+Scaleri signs in with its own Azure application (`174db889-6412-4846-869e-faafd5a578d0`), which Microsoft has approved
+for the Minecraft services, so sign-in works out of the box. Builds can use a different approved application by setting
+the `SCALERI_MSA_CLIENT_ID` environment variable (or the `MSA_CLIENT_ID` repository secret in CI), and players can paste
+one into *Settings → Microsoft sign-in*.
 
 ## Building
 
-If you want to build Prism Launcher yourself, check the [build instructions](https://prismlauncher.org/wiki/development/build-instructions).
+Install [Rust](https://rustup.rs) on Windows, then:
 
-## Sponsors & Partners
+```sh
+cargo build --release
+```
 
-We thank all the wonderful backers over at Open Collective! Support Prism Launcher by [becoming a backer](https://opencollective.com/prismlauncher).
+The launcher is `target\release\scaleri.exe`. Every pull request is built by GitHub Actions, and the executable is
+attached to the run as the `Scaleri-Windows-x64` artifact. Pushing a `v*` tag creates a draft release with it.
 
-[![OpenCollective Backers](https://opencollective.com/prismlauncher/backers.svg?width=890&limit=1000)](https://opencollective.com/prismlauncher#backers)
+Scaleri keeps its files in `%APPDATA%\Scaleri` (set `SCALERI_DATA_DIR` to use another folder):
 
-Thanks to JetBrains for providing us a few licenses for all their products, as part of their [Open Source program](https://www.jetbrains.com/opensource/).
+```text
+settings.json, accounts.json
+instances\<name>\instance.json      the instance's version, icon and play time
+instances\<name>\minecraft\         worlds, options, resource packs, screenshots
+versions\, libraries\, assets\      game files shared by all instances
+runtimes\                           Java runtimes from Mojang
+skins\library\                      skins saved in the skin editor
+```
 
-<a href="https://jb.gg/OpenSource">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://www.jetbrains.com/company/brand/img/logo_jb_dos_4.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg">
-  <img alt="JetBrains logo" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" width="40%">
-</picture>
-</a>
+## Code layout
 
-Thanks to Weblate for hosting our translation efforts.
+| File | What it does |
+| --- | --- |
+| `src/accounts.rs` | Accounts and the Microsoft → Xbox Live → Minecraft sign-in |
+| `src/versions.rs` | Mojang's version list, version files, library rules and assets |
+| `src/java.rs` | Downloading Mojang's Java runtimes |
+| `src/loaders.rs` | Fabric and Quilt profiles layered on top of the vanilla version |
+| `src/launch.rs` | Downloading what an instance needs, building the command line and starting the game |
+| `src/skins.rs` | The skin texture layout, mirroring, old 64×32 skins and the skin library |
+| `src/net.rs` | HTTP, verified downloads and the parallel download queue |
+| `src/ui/` | The window: home screen, skin editor, dialogs, theme and the procedural pixel art |
 
-<a href="https://hosted.weblate.org/engage/prismlauncher/">
-<img src="https://hosted.weblate.org/widgets/prismlauncher/-/open-graph.png" alt="Translation status" width="300" />
-</a>
+## License
 
-Thanks to Netlify for providing us their excellent web services, as part of their [Open Source program](https://www.netlify.com/open-source/).
-
-<a href="https://www.netlify.com"> <img src="https://www.netlify.com/v3/img/components/netlify-color-accent.svg" alt="Deploys by Netlify" /> </a>
-
-Thanks to the awesome people over at [MacStadium](https://www.macstadium.com/), for providing M1-Macs for development purposes!
-
-<a href="https://www.macstadium.com"><img src="https://uploads-ssl.webflow.com/5ac3c046c82724970fc60918/5c019d917bba312af7553b49_MacStadium-developerlogo.png" alt="Powered by MacStadium" width="300"></a>
-
-## Forking/Redistributing/Custom builds policy
-
-You are free to fork, redistribute and provide custom builds as long as you follow the terms of the [license](LICENSE) (this is a legal responsibility), and if you made code changes rather than just packaging a custom build, please do the following as a basic courtesy:
-
-- Make it clear that your fork is not Prism Launcher and is not endorsed by or affiliated with the Prism Launcher project (<https://prismlauncher.org>).
-- Go through [CMakeLists.txt](CMakeLists.txt) and change Prism Launcher's API keys to your own or set them to empty strings (`""`) to disable them (this way the program will still compile but the functionality requiring those keys will be disabled).
-
-If you have any questions or want any clarification on the above conditions please make an issue and ask us.
-
-If you are just building Prism Launcher for your distribution, please make sure to set the `Launcher_BUILD_PLATFORM` to a slug representing your distribution. Examples are `archlinux`, `fedora` and `nixpkgs`.
-
-Note that if you build this software without removing the provided API keys in [CMakeLists.txt](CMakeLists.txt) you are accepting the following terms and conditions:
-
-- [Microsoft Identity Platform Terms of Use](https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use)
-- [CurseForge 3rd Party API Terms and Conditions](https://support.curseforge.com/en/support/solutions/articles/9000207405-curse-forge-3rd-party-api-terms-and-conditions)
-
-If you do not agree with these terms and conditions, then remove the associated API keys from the [CMakeLists.txt](CMakeLists.txt) file by setting them to an empty string (`""`).
-
-## License [![https://github.com/PrismLauncher/PrismLauncher/blob/develop/LICENSE](https://img.shields.io/github/license/PrismLauncher/PrismLauncher?label=License&logo=gnu&color=C4282D)](LICENSE)
-
-All launcher code is available under the GPL-3.0-only license.
-
-The logo and related assets are under the CC BY-SA 4.0 license.
+Scaleri is free software under the GNU General Public License v3.0. See [LICENSE](LICENSE). Minecraft is a trademark of
+Mojang Studios; Scaleri is not affiliated with Mojang or Microsoft.
