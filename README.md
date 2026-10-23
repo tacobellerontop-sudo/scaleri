@@ -26,6 +26,10 @@
 - **Join a server on launch.** Give an instance a server address and the game connects straight to it (Quick Play on
   1.20+, `--server` on older versions).
 - **Your real skin.** Accounts show the face from your Minecraft skin, hat layer included.
+- **Skin editor.** Paint straight onto a 3D player you can turn and zoom, or onto the flat texture. It has a pencil,
+  eraser, fill, colour picker and shading, the hat and jacket layer, mirrored painting, classic and slim arms, and
+  undo. Start from your current skin or drop in any skin PNG, keep skins in your library, and press *Wear in
+  Minecraft* to upload one to your account.
 - **Instance tools.** Duplicate an instance with its worlds, open its game, mods or screenshots folder, or view the last
   game log, from the More button or a right-click.
 - **Its own title bar.** A custom Minecraft-styled title bar shows the latest release, launch progress and what you're
@@ -33,6 +37,10 @@
 - **Light in the background.** By default Scaleri closes as soon as the game starts, so it uses no memory while you play.
   Choose *Keep Scaleri open* in Settings if you'd rather keep it running to track play time. The launcher itself is a
   single ~6 MB executable with no installer.
+
+<p align="center">
+  <img alt="Skin editor" src="docs/skin-editor.png" width="85%">
+</p>
 
 <p align="center">
   <img alt="New instance" src="docs/new-instance.png" width="42%">
@@ -68,6 +76,7 @@ instances\<name>\instance.json      the instance's version, icon and play time
 instances\<name>\minecraft\         worlds, options, resource packs, screenshots
 versions\, libraries\, assets\      game files shared by all instances
 runtimes\                           Java runtimes from Mojang
+skins\library\                      skins saved in the skin editor
 ```
 
 ## Code layout
@@ -79,8 +88,9 @@ runtimes\                           Java runtimes from Mojang
 | `src/java.rs` | Downloading Mojang's Java runtimes |
 | `src/loaders.rs` | Fabric and Quilt profiles layered on top of the vanilla version |
 | `src/launch.rs` | Downloading what an instance needs, building the command line and starting the game |
+| `src/skins.rs` | The skin texture layout, mirroring, old 64×32 skins and the skin library |
 | `src/net.rs` | HTTP, verified downloads and the parallel download queue |
-| `src/ui/` | The window: home screen, dialogs, theme and the procedural pixel art |
+| `src/ui/` | The window: home screen, skin editor, dialogs, theme and the procedural pixel art |
 
 ## License
 

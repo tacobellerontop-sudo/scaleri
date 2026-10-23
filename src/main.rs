@@ -11,6 +11,7 @@ mod loaders;
 mod net;
 mod paths;
 mod settings;
+mod skins;
 mod ui;
 mod versions;
 

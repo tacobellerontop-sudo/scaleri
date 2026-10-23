@@ -2,6 +2,7 @@
 
 mod art;
 mod dialogs;
+mod skin_editor;
 pub mod theme;
 mod titlebar;
 
@@ -19,6 +20,7 @@ use crate::accounts::{self, Account, AccountKind, Accounts, DeviceCode};
 use crate::instances::{self, Instance};
 use crate::net::{Progress, Result};
 use crate::settings::Settings;
+use crate::skins::Skin;
 use crate::versions::{self, Manifest};
 use crate::{launch, paths};
 use dialogs::Dialog;
@@ -33,6 +35,8 @@ pub enum Msg {
     Launched { instance: String, result: Result<()> },
     InstanceUpdated(Instance),
     Face { uuid: String, pixels: Result<Vec<u8>> },
+    SkinLoaded(Result<Skin>),
+    SkinUploaded { uuid: String, result: Result<Vec<u8>> },
     GameExited { instance: String, seconds: u64 },
 }
 
@@ -55,6 +59,12 @@ pub struct Login {
     pub error: Option<String>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Page {
+    Instances,
+    Skins,
+}
+
 pub struct App {
     pub settings: Settings,
     pub accounts: Accounts,
@@ -67,6 +77,8 @@ pub struct App {
     pub dialog: Option<Dialog>,
     pub notice: Option<(String, bool)>,
     pub running: HashSet<String>,
+    pub page: Page,
+    pub skins: skin_editor::SkinEditor,
     tx: Sender<Msg>,
     rx: Receiver<Msg>,
     logo: TextureHandle,
@@ -92,6 +104,8 @@ impl App {
             dialog: None,
             notice: None,
             running: HashSet::new(),
+            page: Page::Instances,
+            skins: skin_editor::SkinEditor::new(),
             tx,
             rx,
             logo,
@@ -175,12 +189,30 @@ impl App {
                 Msg::Face {
                     uuid,
                     pixels: Ok(pixels),
-                } => {
-                    let image = egui::ColorImage::from_rgba_unmultiplied([8, 8], &pixels);
-                    let texture = ctx.load_texture(format!("face-{uuid}"), image, egui::TextureOptions::NEAREST);
-                    self.faces.insert(uuid, texture);
-                }
+                } => self.set_face(ctx, uuid, &pixels),
                 Msg::Face { pixels: Err(_), .. } => {}
+                Msg::SkinLoaded(result) => {
+                    self.skins.busy = None;
+                    match result {
+                        Ok(skin) => {
+                            let name = self.accounts.active().map(|a| a.name.clone()).unwrap_or_default();
+                            self.skins.open(skin, &name);
+                            self.skins.status = Some((format!("Opened {name}'s skin"), false));
+                        }
+                        Err(e) => self.skins.status = Some((e, true)),
+                    }
+                }
+                Msg::SkinUploaded { uuid, result } => {
+                    self.skins.busy = None;
+                    match result {
+                        Ok(face) => {
+                            self.set_face(ctx, uuid, &face);
+                            self.skins.status =
+                                Some(("Done! You'll wear this skin the next time you play.".into(), false));
+                        }
+                        Err(e) => self.skins.status = Some((e, true)),
+                    }
+                }
                 Msg::AccountRefreshed(account) => {
                     self.accounts.upsert(account);
                     self.accounts.save();
@@ -212,6 +244,55 @@ impl App {
                 }
             }
         }
+    }
+
+    fn set_face(&mut self, ctx: &egui::Context, uuid: String, pixels: &[u8]) {
+        let image = egui::ColorImage::from_rgba_unmultiplied([8, 8], pixels);
+        let texture = ctx.load_texture(format!("face-{uuid}"), image, egui::TextureOptions::NEAREST);
+        self.faces.insert(uuid, texture);
+    }
+
+    pub fn load_current_skin(&mut self, ctx: &egui::Context, account: &Account) {
+        self.skins.busy = Some("Loading your skin");
+        self.skins.status = None;
+        let uuid = account.uuid.clone();
+        self.spawn(ctx, move || Msg::SkinLoaded(accounts::current_skin(&uuid)));
+    }
+
+    /// Uploads the editor's skin to a Microsoft account, refreshing the sign-in first if needed.
+    pub fn upload_skin(&mut self, ctx: &egui::Context, account: &Account) {
+        self.skins.busy = Some("Uploading your skin");
+        self.skins.status = None;
+        let skin = self.skins.skin().clone();
+        let client_id = self.settings.client_id();
+        let mut account = account.clone();
+        let tx = self.tx.clone();
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let send = |msg| {
+                let _ = tx.send(msg);
+                ctx.request_repaint();
+            };
+            if account.needs_refresh() {
+                match accounts::refresh(&client_id, &account) {
+                    Ok(fresh) => {
+                        account = fresh.clone();
+                        send(Msg::AccountRefreshed(fresh));
+                    }
+                    Err(e) => {
+                        send(Msg::SkinUploaded {
+                            uuid: account.uuid.clone(),
+                            result: Err(e),
+                        });
+                        return;
+                    }
+                }
+            }
+            send(Msg::SkinUploaded {
+                uuid: account.uuid.clone(),
+                result: accounts::upload_skin(&account, &skin),
+            });
+        });
     }
 
     pub fn start_sign_in(&mut self, ctx: &egui::Context) {
@@ -377,6 +458,20 @@ impl App {
     fn sidebar(&mut self, ui: &mut Ui) {
         ui.add_space(6.0);
 
+        let pages = [
+            (art::Glyph::Grass, "Instances", Page::Instances),
+            (art::Glyph::Brush, "Skin Editor", Page::Skins),
+        ];
+        for (icon, label, page) in pages {
+            if sidebar_button(ui, Some(icon), label, self.page == page).clicked() {
+                self.page = page;
+            }
+        }
+        ui.add_space(6.0);
+        let (sep, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 2.0), Sense::hover());
+        ui.painter().rect_filled(sep, 0.0, theme::PANEL);
+        ui.add_space(6.0);
+
         let nav = [
             (Some(art::Glyph::Plus), "New Instance"),
             (Some(art::Glyph::Gear), "Settings"),
@@ -384,9 +479,12 @@ impl App {
             (Some(art::Glyph::Chest), "Open Folder"),
         ];
         for (icon, label) in nav {
-            if sidebar_button(ui, icon, label).clicked() {
+            if sidebar_button(ui, icon, label, false).clicked() {
                 match label {
-                    "New Instance" => self.open_new_instance(ui.ctx()),
+                    "New Instance" => {
+                        self.page = Page::Instances;
+                        self.open_new_instance(ui.ctx());
+                    }
                     "Settings" => self.dialog = Some(Dialog::Settings(Box::new(self.settings.clone()))),
                     "Accounts" => self.dialog = Some(Dialog::accounts(None)),
                     _ => paths::open_in_explorer(paths::data_dir()),
@@ -796,10 +894,10 @@ impl App {
 }
 
 /// A sidebar entry; with no glyph it shows the player's head.
-fn sidebar_button(ui: &mut Ui, icon: Option<art::Glyph>, label: &str) -> egui::Response {
+fn sidebar_button(ui: &mut Ui, icon: Option<art::Glyph>, label: &str, current: bool) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 40.0), Sense::click());
     let p = ui.painter();
-    if response.hovered() {
+    if current || response.hovered() {
         p.rect_filled(rect, 0.0, theme::PANEL);
         p.rect_filled(
             Rect::from_min_size(rect.min, Vec2::new(3.0, rect.height())),
@@ -889,20 +987,27 @@ impl eframe::App for App {
 
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(theme::BG))
-            .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 0.0;
-                self.hero(ui);
-                ui.spacing_mut().item_spacing.y = 8.0;
-                egui::Frame::new()
-                    .inner_margin(egui::Margin {
-                        left: 24,
-                        right: 24,
-                        top: 18,
-                        bottom: 12,
-                    })
-                    .show(ui, |ui| {
-                        self.library(ui);
+            .show(ui, |ui| match self.page {
+                Page::Instances => {
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    self.hero(ui);
+                    ui.spacing_mut().item_spacing.y = 8.0;
+                    egui::Frame::new()
+                        .inner_margin(egui::Margin {
+                            left: 24,
+                            right: 24,
+                            top: 18,
+                            bottom: 12,
+                        })
+                        .show(ui, |ui| {
+                            self.library(ui);
+                        });
+                }
+                Page::Skins => {
+                    egui::Frame::new().inner_margin(20).show(ui, |ui| {
+                        skin_editor::show(self, ui);
                     });
+                }
             });
 
         dialogs::show(self, &ctx);

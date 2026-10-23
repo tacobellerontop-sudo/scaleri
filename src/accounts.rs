@@ -10,6 +10,7 @@ use serde_json::{json, Value};
 
 use crate::net::{self, Progress, Result};
 use crate::paths;
+use crate::skins::Skin;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum AccountKind {
@@ -301,9 +302,9 @@ fn minecraft_account(ms_access_token: &str, refresh_token: String) -> Result<Acc
 /// The player's face from their skin, with the hat layer on top, as 8×8 RGBA pixels.
 /// The skin is cached so the face still shows when offline.
 pub fn fetch_face(uuid: &str) -> Result<Vec<u8>> {
-    let cache = paths::data_dir().join("skins").join(format!("{uuid}.png"));
+    let cache = skin_cache(uuid);
     let skin = match download_skin(uuid) {
-        Ok(png) => {
+        Ok((png, _)) => {
             let _ = paths::write_atomic(&cache, &png);
             png
         }
@@ -312,7 +313,57 @@ pub fn fetch_face(uuid: &str) -> Result<Vec<u8>> {
     face_from_skin(&skin)
 }
 
-fn download_skin(uuid: &str) -> Result<Vec<u8>> {
+/// The skin the player wears now, for the skin editor.
+pub fn current_skin(uuid: &str) -> Result<Skin> {
+    let (png, slim) = download_skin(uuid)?;
+    let _ = paths::write_atomic(&skin_cache(uuid), &png);
+    let mut skin = Skin::from_png(&png)?;
+    skin.slim = slim;
+    Ok(skin)
+}
+
+fn skin_cache(uuid: &str) -> std::path::PathBuf {
+    paths::data_dir().join("skins").join(format!("{uuid}.png"))
+}
+
+/// Makes `skin` the account's skin in Minecraft. Returns the new face for the account list.
+pub fn upload_skin(account: &Account, skin: &Skin) -> Result<Vec<u8>> {
+    let png = skin.to_png();
+    let boundary = format!("ScaleriSkin{:x}", now());
+    let variant = if skin.slim { "slim" } else { "classic" };
+    let mut body = format!(
+        "--{boundary}\r\nContent-Disposition: form-data; name=\"variant\"\r\n\r\n{variant}\r\n\
+         --{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"skin.png\"\r\n\
+         Content-Type: image/png\r\n\r\n"
+    )
+    .into_bytes();
+    body.extend_from_slice(&png);
+    body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+    let mut res = net::agent()
+        .post("https://api.minecraftservices.com/minecraft/profile/skins")
+        .header("Authorization", &format!("Bearer {}", account.access_token))
+        .header("Content-Type", &format!("multipart/form-data; boundary={boundary}"))
+        .send(&body[..])
+        .map_err(|e| format!("Could not reach Minecraft: {e}"))?;
+    match res.status().as_u16() {
+        200..=299 => {}
+        401 => return Err("Your Microsoft sign-in has expired. Sign in again in Accounts.".into()),
+        429 => return Err("Minecraft is limiting skin changes right now. Try again in a minute.".into()),
+        status => {
+            let detail = res.body_mut().read_to_string().unwrap_or_default();
+            let message = serde_json::from_str::<Value>(&detail)
+                .ok()
+                .and_then(|v| v["errorMessage"].as_str().map(String::from))
+                .unwrap_or(detail);
+            return Err(format!("Minecraft didn't accept the skin ({status}): {message}"));
+        }
+    }
+    let _ = paths::write_atomic(&skin_cache(&account.uuid), &png);
+    Ok(skin.face_pixels())
+}
+
+/// The skin PNG and whether it uses slim arms.
+fn download_skin(uuid: &str) -> Result<(Vec<u8>, bool)> {
     use base64::Engine;
     let profile: Value = net::get_json(&format!(
         "https://sessionserver.mojang.com/session/minecraft/profile/{uuid}"
@@ -326,17 +377,21 @@ fn download_skin(uuid: &str) -> Result<Vec<u8>> {
         .decode(encoded)
         .map_err(|e| format!("Unreadable skin data: {e}"))?;
     let textures: Value = serde_json::from_slice(&decoded).map_err(|e| format!("Unreadable skin data: {e}"))?;
-    let url = textures["textures"]["SKIN"]["url"]
+    let texture = &textures["textures"]["SKIN"];
+    let url = texture["url"]
         .as_str()
         .ok_or("This profile uses the default skin")?
         .replace("http://", "https://");
+    let slim = texture["metadata"]["model"] == "slim";
     let mut res = net::agent()
         .get(&url)
         .call()
         .map_err(|e| format!("Could not download the skin: {e}"))?;
-    res.body_mut()
+    let png = res
+        .body_mut()
         .read_to_vec()
-        .map_err(|e| format!("Could not download the skin: {e}"))
+        .map_err(|e| format!("Could not download the skin: {e}"))?;
+    Ok((png, slim))
 }
 
 fn face_from_skin(png: &[u8]) -> Result<Vec<u8>> {

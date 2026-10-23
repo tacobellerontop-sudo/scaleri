@@ -333,6 +333,8 @@ pub enum Glyph {
     Plus,
     Gear,
     Chest,
+    Grass,
+    Brush,
 }
 
 pub fn paint_glyph(p: &Painter, rect: Rect, glyph: Glyph) {
@@ -345,6 +347,12 @@ pub fn paint_glyph(p: &Painter, rect: Rect, glyph: Glyph) {
         ],
         Glyph::Chest => [
             "........", "dddddddd", "dwwwwwwd", "dddyyddd", "dwwyywwd", "dwwwwwwd", "dddddddd", "........",
+        ],
+        Glyph::Grass => [
+            "gggggggg", "GgGggGgG", "dGddGddG", "dddddddd", "dwdddwdd", "dddddddd", "ddwddddw", "dddddddd",
+        ],
+        Glyph::Brush => [
+            "......ss", ".....sSs", "....sSs.", "...sSs..", "..wws...", ".ywww...", "yyyw....", "yy......",
         ],
     };
     let px = rect.width() / 8.0;
