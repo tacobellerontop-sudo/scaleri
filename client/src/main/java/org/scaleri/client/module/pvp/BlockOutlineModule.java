@@ -38,17 +38,6 @@ public class BlockOutlineModule extends Module {
         double oy = pos.getY() - camY;
         double oz = pos.getZ() - camZ;
 
-        if (fill.isOn() && context.consumers() != null) {
-            int c = fillColor.getArgb();
-            float r = (c >> 16 & 0xFF) / 255f;
-            float g = (c >> 8 & 0xFF) / 255f;
-            float b = (c & 0xFF) / 255f;
-            float a = (c >>> 24) / 255f;
-            for (Box box : shape.getBoundingBoxes()) {
-                DebugRenderer.drawBox(matrices, context.consumers(), box.offset(ox, oy, oz).expand(0.002), r, g, b, a);
-            }
-        }
-
         int c = outlineColor.getArgb();
         int r = c >> 16 & 0xFF;
         int g = c >> 8 & 0xFF;
@@ -66,6 +55,18 @@ public class BlockOutlineModule extends Module {
             lines.vertex(entry, (float) (x1 + ox), (float) (y1 + oy), (float) (z1 + oz)).color(r, g, b, a).normal(entry, nx, ny, nz);
             lines.vertex(entry, (float) (x2 + ox), (float) (y2 + oy), (float) (z2 + oz)).color(r, g, b, a).normal(entry, nx, ny, nz);
         });
+
+        // Fill after the outline: asking for another buffer can flush the lines buffer.
+        if (fill.isOn() && context.consumers() != null) {
+            int fc = fillColor.getArgb();
+            float fr = (fc >> 16 & 0xFF) / 255f;
+            float fg = (fc >> 8 & 0xFF) / 255f;
+            float fb = (fc & 0xFF) / 255f;
+            float fa = (fc >>> 24) / 255f;
+            for (Box box : shape.getBoundingBoxes()) {
+                DebugRenderer.drawBox(matrices, context.consumers(), box.offset(ox, oy, oz).expand(0.002), fr, fg, fb, fa);
+            }
+        }
         return false;
     }
 }
