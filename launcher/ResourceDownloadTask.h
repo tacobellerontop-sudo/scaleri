@@ -40,12 +40,14 @@ class ResourceDownloadTask : public SequentialTask {
     const ModPlatform::IndexedVersion& getVersion() const { return m_pack_version; }
     const ModPlatform::ResourceProvider& getProvider() const { return m_pack->provider; }
     const QString& getName() const { return m_pack->name; }
+    const QString& getDownloadReason() const { return m_download_reason; }
     ModPlatform::IndexedPack::Ptr getPack() { return m_pack; }
 
    private:
     ModPlatform::IndexedPack::Ptr m_pack;
     ModPlatform::IndexedVersion m_pack_version;
     ResourceFolderModel* m_pack_model;
+    QString m_download_reason;
 
     NetJob::Ptr m_filesNetJob;
     LocalResourceUpdateTask::Ptr m_update_task;
