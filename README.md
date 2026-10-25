@@ -11,6 +11,10 @@
   <br />This is a <b>fork</b> of the MultiMC Launcher and is <b>not</b> endorsed by it.
 </p>
 
+## Scaleri Client
+
+This repository also contains **Scaleri Client**, a casual PvP and HUD mod for Minecraft 1.21.1 (Fabric). See [`client/README.md`](client/README.md).
+
 ## Installation
 
 <a href="https://repology.org/project/prismlauncher/versions">

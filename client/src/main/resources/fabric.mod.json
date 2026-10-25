@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "scaleri",
+  "version": "${version}",
+  "name": "Scaleri Client",
+  "description": "A casual PvP client: drag-and-drop HUD, keystrokes, CPS, armor and potion HUDs, toggle sprint, zoom, freelook, custom crosshair and more.",
+  "authors": ["Scaleri"],
+  "contact": {
+    "sources": "https://github.com/tacobellerontop-sudo/scaleri"
+  },
+  "license": "GPL-3.0-only",
+  "icon": "assets/scaleri/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["org.scaleri.client.ScaleriClient"]
+  },
+  "mixins": ["scaleri.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "sodium": "*",
+    "lithium": "*"
+  }
+}
