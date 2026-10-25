@@ -58,7 +58,7 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
           set -o pipefail
-          xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient -PsmokeTest --no-daemon 2>&1 | tee smoke.log
+          timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runClient -PsmokeTest --no-daemon 2>&1 | tee smoke.log
           grep -q SCALERI_SMOKE_OK smoke.log
 
       - name: Upload smoke test log

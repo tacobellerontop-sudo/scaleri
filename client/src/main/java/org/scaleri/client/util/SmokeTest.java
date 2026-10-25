@@ -5,7 +5,6 @@ import java.util.Deque;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.TitleScreen;
 import org.scaleri.client.ScaleriClient;
 import org.scaleri.client.gui.HudEditorScreen;
 import org.scaleri.client.gui.ModMenuScreen;
@@ -35,7 +34,9 @@ public final class SmokeTest {
 
     private static void tick(MinecraftClient mc) {
         if (!started) {
-            if (!(mc.currentScreen instanceof TitleScreen) || ++wait < 40) {
+            // First launch shows the accessibility screen instead of the title screen,
+            // so start from whatever screen is up once loading has finished.
+            if (mc.getOverlay() != null || mc.currentScreen == null || ++wait < 40) {
                 return;
             }
             started = true;
