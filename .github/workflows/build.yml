@@ -123,8 +123,14 @@ jobs:
       ##
 
       - name: Configure project
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
-          cmake --preset "$CMAKE_PRESET"
+          if [ -n "$CURSEFORGE_API_KEY" ]; then
+            cmake --preset "$CMAKE_PRESET" -D "Launcher_CURSEFORGE_API_KEY=$CURSEFORGE_API_KEY"
+          else
+            cmake --preset "$CMAKE_PRESET"
+          fi
 
       - name: Run build
         run: |
