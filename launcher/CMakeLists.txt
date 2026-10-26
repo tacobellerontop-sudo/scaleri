@@ -1065,8 +1065,14 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/IconPickerDialog.h
     ui/dialogs/ImportResourceDialog.cpp
     ui/dialogs/ImportResourceDialog.h
-    ui/dialogs/ProfileModsDialog.cpp
-    ui/dialogs/ProfileModsDialog.h
+
+    # Main window shell (sidebar pages)
+    ui/shell/HomePage.cpp
+    ui/shell/HomePage.h
+    ui/shell/ModsPage.cpp
+    ui/shell/ModsPage.h
+    ui/shell/ProfileModsInstaller.cpp
+    ui/shell/ProfileModsInstaller.h
     ui/dialogs/MSALoginDialog.cpp
     ui/dialogs/MSALoginDialog.h
     ui/dialogs/NetworkJobFailedDialog.cpp

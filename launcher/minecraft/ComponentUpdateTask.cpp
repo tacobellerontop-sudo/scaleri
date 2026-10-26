@@ -789,6 +789,10 @@ void ComponentUpdateTask::remoteLoadFailed(size_t taskIndex, const QString& msg)
 
 void ComponentUpdateTask::checkIfAllFinished()
 {
+    if (!isRunning()) {
+        // loadComponents() can fail the task while remote loads are still in flight; don't fail it twice
+        return;
+    }
     setProgress(m_progress + 1, m_progressTotal);
     if (d->remoteTasksInProgress) {
         // not yet...
