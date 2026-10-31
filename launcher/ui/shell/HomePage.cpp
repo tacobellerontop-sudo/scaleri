@@ -18,6 +18,7 @@
 #include "HomePage.h"
 
 #include <QAbstractItemView>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QEvent>
 #include <QFileInfo>
@@ -36,6 +37,9 @@
 #include "InstanceList.h"
 #include "icons/IconList.h"
 #include "minecraft/MinecraftInstance.h"
+#include "scaleri/ScaleriClient.h"
+#include "ui/dialogs/CustomMessageBox.h"
+#include "ui/dialogs/ProgressDialog.h"
 #include "ui/shell/ProfileModsInstaller.h"
 
 HomePage::HomePage(QWidget* parent)
@@ -48,6 +52,8 @@ HomePage::HomePage(QWidget* parent)
     , m_edit(new QPushButton(QIcon::fromTheme("instance-settings"), tr("Edit profile"), this))
     , m_mods(new QPushButton(QIcon::fromTheme("loadermods"), tr("Browse mods"), this))
     , m_folder(new QPushButton(QIcon::fromTheme("viewfolder"), tr("Open folder"), this))
+    , m_scaleriClient(new QCheckBox(tr("Scaleri Client"), this))
+    , m_addScaleriProfile(new QPushButton(APPLICATION->icons()->getIcon(ScaleriClient::IconKey), tr("Add Scaleri Client profile"), this))
 {
     setObjectName("homePage");
 
@@ -107,7 +113,10 @@ HomePage::HomePage(QWidget* parent)
     quick->addWidget(m_edit);
     quick->addWidget(m_mods);
     quick->addWidget(m_folder);
+    quick->addSpacing(12);
+    quick->addWidget(m_scaleriClient);
     quick->addStretch(1);
+    quick->addWidget(m_addScaleriProfile);
     layout->addLayout(quick);
     layout->addStretch(1);
 
@@ -123,6 +132,8 @@ HomePage::HomePage(QWidget* parent)
         }
     });
     connect(m_mods, &QPushButton::clicked, this, [this] { emit modsRequested(m_currentId); });
+    connect(m_scaleriClient, &QCheckBox::clicked, this, &HomePage::setScaleriClientEnabled);
+    connect(m_addScaleriProfile, &QPushButton::clicked, this, &HomePage::addScaleriClientProfile);
     connect(m_folder, &QPushButton::clicked, this, [this] {
         if (auto* instance = currentInstance()) {
             DesktopServices::openPath(QFileInfo(instance->instanceRoot()));
@@ -204,6 +215,21 @@ void HomePage::updateCard()
     m_edit->setEnabled(instance && instance->canEdit());
     m_mods->setEnabled(instance && dynamic_cast<MinecraftInstance*>(instance));
     m_folder->setEnabled(instance != nullptr);
+    m_addScaleriProfile->setVisible(!ScaleriClient::hasProfile());
+
+    auto* minecraft = dynamic_cast<MinecraftInstance*>(instance);
+    m_scaleriClient->setVisible(minecraft != nullptr);
+    if (minecraft) {
+        QString reason;
+        const bool enabled = ScaleriClient::isEnabled(minecraft);
+        const bool compatible = ScaleriClient::isCompatible(minecraft, &reason);
+        m_scaleriClient->setChecked(enabled);
+        m_scaleriClient->setEnabled((compatible || enabled) && !instance->isRunning());
+        m_scaleriClient->setToolTip(compatible ? tr("Play this profile with Scaleri Client %1, the PvP mod that comes with %2. It's kept "
+                                                    "up to date every time you launch.")
+                                                     .arg(ScaleriClient::version(), BuildConfig.LAUNCHER_DISPLAYNAME)
+                                               : reason);
+    }
 
     if (!instance) {
         m_icon->setPixmap(APPLICATION->logo().pixmap(64, 64));
@@ -259,6 +285,29 @@ void HomePage::play()
     } else if (instance->canLaunch()) {
         APPLICATION->launch(instance);
     }
+}
+
+void HomePage::setScaleriClientEnabled(bool enabled)
+{
+    auto* instance = dynamic_cast<MinecraftInstance*>(currentInstance());
+    if (!instance) {
+        return;
+    }
+    QString error;
+    if (!ScaleriClient::setEnabled(instance, enabled, &error) && !error.isEmpty()) {
+        CustomMessageBox::selectable(this, tr("Scaleri Client"), error, QMessageBox::Warning)->show();
+    }
+    updateCard();
+}
+
+void HomePage::addScaleriClientProfile()
+{
+    unique_qobject_ptr<Task> task(ScaleriClient::createProfileTask());
+    connect(task.get(), &Task::failed, this,
+            [this](const QString& reason) { CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show(); });
+    ProgressDialog dialog(this);
+    dialog.execWithTask(task.get());
+    updateCard();
 }
 
 BaseInstance* HomePage::currentInstance() const

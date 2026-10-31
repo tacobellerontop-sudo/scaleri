@@ -41,7 +41,9 @@ namespace ProfileInfo {
 void ensureLoaded(MinecraftInstance* instance)
 {
     auto* profile = instance->getPackProfile();
-    if (profile->getComponentVersion("net.minecraft").isEmpty()) {
+    // A running update task is already loading the components. Reloading would abort it and restart its metadata
+    // downloads while they are still running, which trips an assertion in Task::start().
+    if (profile->getComponentVersion("net.minecraft").isEmpty() && !profile->getCurrentTask()) {
         profile->reload(Net::Mode::Offline);
     }
 }

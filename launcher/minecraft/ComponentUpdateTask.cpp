@@ -132,7 +132,10 @@ static LoadResult loadComponent(ComponentPtr component, Task::Ptr& loadTask, Net
             result = LoadResult::LoadedLocal;
         } else {
             loadTask = APPLICATION->metadataIndex()->loadVersion(component->m_uid, component->m_version, netmode);
-            loadTask->start();
+            // Offline loads share the version's own task, which another profile may have started already.
+            if (!loadTask->isRunning()) {
+                loadTask->start();
+            }
             if (netmode == Net::Mode::Online)
                 result = LoadResult::RequiresRemote;
             else if (metaVersion->isLoaded())

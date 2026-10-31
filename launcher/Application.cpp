@@ -46,6 +46,7 @@
 #include "DataMigrationTask.h"
 #include "java/JavaInstallList.h"
 #include "net/PasteUpload.h"
+#include "scaleri/ScaleriClient.h"
 #include "tasks/Task.h"
 #include "tools/GenericProfiler.h"
 #include "ui/InstanceWindow.h"
@@ -647,6 +648,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
         // Remembered state
         m_settings->registerSetting("LastUsedGroupForNewInstance", QString());
+        // Set once the Scaleri Client profile has been created, so deleting it sticks
+        m_settings->registerSetting("ScaleriClientProfileCreated", false);
 
         m_settings->registerSetting("MenuBarInsteadOfToolBar", false);
 
@@ -1378,6 +1381,10 @@ void Application::performMainStartupAction()
         const QString tempRoot = FS::PathCombine(instDir, ".tmp");
         FS::deletePath(tempRoot);
     }
+
+    // every install starts with a ready-to-play Scaleri Client profile (after the cleanup above, which would delete it
+    // while it is being staged)
+    ScaleriClient::ensureDefaultProfile();
 
     if (!m_urlsToImport.isEmpty()) {
         qDebug() << "<> Importing from url:" << m_urlsToImport;

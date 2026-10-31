@@ -62,6 +62,7 @@
 #include "minecraft/launch/EnsureAvailableMemory.h"
 #include "minecraft/launch/EnsureOfflineLibraries.h"
 #include "minecraft/launch/ExtractNatives.h"
+#include "minecraft/launch/InstallScaleriClient.h"
 #include "minecraft/launch/LauncherPartLaunch.h"
 #include "minecraft/launch/ModMinecraftJar.h"
 #include "minecraft/launch/PrintInstanceInfo.h"
@@ -251,6 +252,9 @@ void MinecraftInstance::loadSpecificSettings()
     // Use account for instance, this does not have a global override
     m_settings->registerSetting("UseAccountForInstance", false);
     m_settings->registerSetting("InstanceAccountId", "");
+
+    // Scaleri Client, the PvP mod bundled with the launcher
+    m_settings->registerSetting("ScaleriClient", false);
 
     m_settings->registerSetting("ExportName", "");
     m_settings->registerSetting("ExportVersion", "1.0.0");
@@ -1197,6 +1201,11 @@ LaunchTask* MinecraftInstance::createLaunchTask(AuthSessionPtr session, Minecraf
     // if there are any jar mods
     {
         process->appendStep(makeShared<ModMinecraftJar>(pptr));
+    }
+
+    // install or update the bundled Scaleri Client mod, if this profile uses it
+    {
+        process->appendStep(makeShared<InstallScaleriClient>(pptr, this, session->launchMode != LaunchMode::Offline));
     }
 
     // Scan mods folders for mods

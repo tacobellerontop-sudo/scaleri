@@ -21,6 +21,7 @@
 #include <QWidget>
 
 class BaseInstance;
+class QCheckBox;
 class QComboBox;
 class QLabel;
 class QPushButton;
@@ -48,6 +49,8 @@ class HomePage : public QWidget {
     void updateCard();
     void updateStyle();
     void play();
+    void setScaleriClientEnabled(bool enabled);
+    void addScaleriClientProfile();
 
     BaseInstance* currentInstance() const;
 
@@ -59,6 +62,8 @@ class HomePage : public QWidget {
     QPushButton* m_edit;
     QPushButton* m_mods;
     QPushButton* m_folder;
+    QCheckBox* m_scaleriClient;
+    QPushButton* m_addScaleriProfile;
 
     QString m_currentId;
     QPointer<BaseInstance> m_watched;

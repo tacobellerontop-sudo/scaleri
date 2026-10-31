@@ -276,6 +276,8 @@ set(MINECRAFT_SOURCES
     minecraft/launch/PrintInstanceInfo.h
     minecraft/launch/ReconstructAssets.cpp
     minecraft/launch/ReconstructAssets.h
+    minecraft/launch/InstallScaleriClient.cpp
+    minecraft/launch/InstallScaleriClient.h
     minecraft/launch/ScanModFolders.cpp
     minecraft/launch/ScanModFolders.h
     minecraft/launch/VerifyJavaInstall.cpp
@@ -1067,6 +1069,10 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/IconPickerDialog.h
     ui/dialogs/ImportResourceDialog.cpp
     ui/dialogs/ImportResourceDialog.h
+
+    # Scaleri Client, the bundled PvP mod
+    scaleri/ScaleriClient.cpp
+    scaleri/ScaleriClient.h
 
     # Main window shell (sidebar pages)
     ui/shell/HomePage.cpp

@@ -255,13 +255,14 @@ endif()
 # breakage to thousands of users.
 # If you don't plan to use these features of this software, you can just remove these values.
 #
-# Scaleri is a rebrand of Prism Launcher, so it does NOT reuse Prism Launcher's keys. All of them default to empty,
-# which disables the matching feature (Microsoft login, CurseForge, Imgur uploads). Pass your own at configure time,
-# e.g. -DLauncher_MSA_CLIENT_ID=<your Azure app id>, or set them at runtime under Settings > APIs. See README.md.
+# Scaleri is a rebrand of Prism Launcher, so it does NOT reuse Prism Launcher's keys. Microsoft login uses Scaleri's
+# own Azure application, which Microsoft approved for the Minecraft services. CurseForge and Imgur default to empty,
+# which disables those features. Pass your own at configure time, e.g. -DLauncher_CURSEFORGE_API_KEY=<key>, or set
+# them at runtime under Settings > APIs. See README.md.
 
 # By using this key in your builds you accept the terms of use laid down in
 # https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use
-set(Launcher_MSA_CLIENT_ID "" CACHE STRING "Client ID you can get from Microsoft Identity Platform when you register an application")
+set(Launcher_MSA_CLIENT_ID "174db889-6412-4846-869e-faafd5a578d0" CACHE STRING "Client ID you can get from Microsoft Identity Platform when you register an application")
 
 # By using this key in your builds you accept the terms and conditions laid down in
 # https://support.curseforge.com/en/support/solutions/articles/9000207405-curse-forge-3rd-party-api-terms-and-conditions
@@ -499,6 +500,54 @@ add_subdirectory(libraries/rainbow) # Qt extension for colors
 add_subdirectory(libraries/LocalPeer) # fork of a library from Qt solutions
 add_subdirectory(libraries/murmur2) # Hash for usage with the CurseForge API
 add_subdirectory(libraries/qdcss) # css parser
+
+################################ Scaleri Client ###############################
+
+# Scaleri Client (client/) is the PvP mod every Scaleri install ships with. The launcher keeps a copy of the jar next to
+# its own jars and installs it into profiles that use it (see launcher/scaleri/ScaleriClient.h).
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/client/gradle.properties" Launcher_ScaleriClient_Properties REGEX "^[a-z_]+=")
+foreach(line IN LISTS Launcher_ScaleriClient_Properties)
+    if(line MATCHES "^(minecraft_version|loader_version|mod_version)=(.*)$")
+        set(Launcher_ScaleriClient_${CMAKE_MATCH_1} "${CMAKE_MATCH_2}")
+    endif()
+endforeach()
+set(Launcher_SCALERI_CLIENT_VERSION "${Launcher_ScaleriClient_mod_version}")
+set(Launcher_SCALERI_CLIENT_MINECRAFT_VERSION "${Launcher_ScaleriClient_minecraft_version}")
+set(Launcher_SCALERI_CLIENT_LOADER_VERSION "${Launcher_ScaleriClient_loader_version}")
+
+set(Launcher_SCALERI_CLIENT_JAR "" CACHE FILEPATH "Prebuilt Scaleri Client jar to bundle (from ./gradlew build in client/)")
+option(Launcher_BUILD_SCALERI_CLIENT "Build Scaleri Client from client/ with Gradle (needs JDK 21 and Internet access)" OFF)
+
+set(Launcher_ScaleriClient_Bundled "${CMAKE_JAVA_TARGET_OUTPUT_DIR}/scaleri-client.jar")
+if(Launcher_SCALERI_CLIENT_JAR)
+    if(NOT EXISTS "${Launcher_SCALERI_CLIENT_JAR}")
+        message(FATAL_ERROR "Launcher_SCALERI_CLIENT_JAR points at a missing file: ${Launcher_SCALERI_CLIENT_JAR}")
+    endif()
+    configure_file("${Launcher_SCALERI_CLIENT_JAR}" "${Launcher_ScaleriClient_Bundled}" COPYONLY)
+    install(FILES "${Launcher_ScaleriClient_Bundled}" DESTINATION "${JARS_DEST_DIR}")
+    message(STATUS "Bundling Scaleri Client ${Launcher_SCALERI_CLIENT_VERSION} from ${Launcher_SCALERI_CLIENT_JAR}")
+elseif(Launcher_BUILD_SCALERI_CLIENT)
+    if(WIN32)
+        set(Launcher_ScaleriClient_Gradle "${CMAKE_CURRENT_SOURCE_DIR}/client/gradlew.bat")
+    else()
+        set(Launcher_ScaleriClient_Gradle "${CMAKE_CURRENT_SOURCE_DIR}/client/gradlew")
+    endif()
+    set(Launcher_ScaleriClient_Built
+        "${CMAKE_CURRENT_SOURCE_DIR}/client/build/libs/scaleri-client-${Launcher_SCALERI_CLIENT_VERSION}.jar")
+    add_custom_command(
+        OUTPUT "${Launcher_ScaleriClient_Bundled}"
+        COMMAND "${Launcher_ScaleriClient_Gradle}" build --no-daemon
+        COMMAND ${CMAKE_COMMAND} -E copy "${Launcher_ScaleriClient_Built}" "${Launcher_ScaleriClient_Bundled}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/client"
+        COMMENT "Building Scaleri Client"
+        USES_TERMINAL)
+    add_custom_target(scaleri_client_jar ALL DEPENDS "${Launcher_ScaleriClient_Bundled}")
+    install(FILES "${Launcher_ScaleriClient_Bundled}" DESTINATION "${JARS_DEST_DIR}")
+    message(STATUS "Building and bundling Scaleri Client ${Launcher_SCALERI_CLIENT_VERSION}")
+else()
+    message(WARNING "Scaleri Client is not bundled with this build. Set Launcher_SCALERI_CLIENT_JAR to a jar built from "
+                    "client/, or turn on Launcher_BUILD_SCALERI_CLIENT.")
+endif()
 
 ############################### Built Artifacts ###############################
 

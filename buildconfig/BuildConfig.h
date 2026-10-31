@@ -159,6 +159,13 @@ class Config {
     QString FLAME_API_KEY;
 
     /**
+     * Version of the bundled Scaleri Client mod, and the Minecraft and Fabric Loader versions it is built for
+     */
+    QString SCALERI_CLIENT_VERSION;
+    QString SCALERI_CLIENT_MINECRAFT_VERSION;
+    QString SCALERI_CLIENT_LOADER_VERSION;
+
+    /**
      * Metadata repository URL prefix
      */
     QString META_URL;

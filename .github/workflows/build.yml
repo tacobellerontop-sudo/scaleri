@@ -27,8 +27,46 @@ on:
 permissions: {}
 
 jobs:
+  # Scaleri Client, the PvP mod in client/, ships inside every launcher build
+  client-jar:
+    name: Build Scaleri Client
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew build --no-daemon
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: Scaleri-Client-jar
+          path: |
+            client/build/libs/scaleri-client-*.jar
+            !client/build/libs/*-sources.jar
+          if-no-files-found: error
+
   build:
     name: Build (${{ matrix.artifact-name }})
+    needs: client-jar
 
     environment: ${{ inputs.environment || '' }}
 
@@ -118,6 +156,12 @@ jobs:
           vcvars-arch: ${{ matrix.vcvars-arch }}
           qt-version: ${{ matrix.qt-version }}
 
+      - name: Download Scaleri Client
+        uses: actions/download-artifact@v4
+        with:
+          name: Scaleri-Client-jar
+          path: client-jar
+
       ##
       # BUILD
       ##
@@ -129,7 +173,9 @@ jobs:
           MSA_CLIENT_ID: ${{ secrets.MSA_CLIENT_ID }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
-          args=()
+          jar="$(ls "$PWD"/client-jar/scaleri-client-*.jar | head -n 1)"
+          if command -v cygpath > /dev/null; then jar="$(cygpath -m "$jar")"; fi
+          args=(-D "Launcher_SCALERI_CLIENT_JAR=$jar")
           if [ -n "$MSA_CLIENT_ID" ]; then args+=(-D "Launcher_MSA_CLIENT_ID=$MSA_CLIENT_ID"); fi
           if [ -n "$CURSEFORGE_API_KEY" ]; then args+=(-D "Launcher_CURSEFORGE_API_KEY=$CURSEFORGE_API_KEY"); fi
           cmake --preset "$CMAKE_PRESET" "${args[@]}"
