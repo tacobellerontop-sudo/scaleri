@@ -189,6 +189,15 @@ jobs:
 
       - name: Run tests
         run: |
+          # TEMPORARY: CTest shows no Qt Test output on MinGW, and ResourceFolderModel only fails on its first run there,
+          # so run it once directly with a log file first to see which check fails
+          diagnostic=0
+          if [ -n "$MSYSTEM" ] && [ -f "build/$BUILD_TYPE/ResourceFolderModel.exe" ]; then
+            start=$(date +%s)
+            (cd build/tests && "../$BUILD_TYPE/ResourceFolderModel.exe" -o ../ResourceFolderModel-first.log,txt -v2) || diagnostic=1
+            echo "ResourceFolderModel first run: exit $diagnostic after $(( $(date +%s) - start ))s"
+            [ "$diagnostic" = 0 ] || grep -v "message location" build/ResourceFolderModel-first.log || true
+          fi
           # On failure, run the failed tests again verbosely to tell a flaky test from a broken one
           ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --output-on-failure || {
             ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --rerun-failed --extra-verbose
@@ -204,6 +213,7 @@ jobs:
             done
             exit 1
           }
+          exit $diagnostic
 
       ##
       # PACKAGE
