@@ -56,6 +56,7 @@
 #include <QApplication>
 #include <QButtonGroup>
 #include <QFileDialog>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
@@ -67,9 +68,11 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QShortcut>
+#include <QStackedWidget>
 #include <QStatusBar>
 #include <QToolBar>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <QWidget>
 #include <QWidgetAction>
 #include <memory>
@@ -108,6 +111,8 @@
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
+#include "ui/shell/HomePage.h"
+#include "ui/shell/ModsPage.h"
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
 #include "ui/widgets/LabeledToolButton.h"
@@ -331,7 +336,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
-        ui->horizontalLayout->addWidget(view);
+        createShell();
     }
     // The cat background
     {
@@ -927,6 +932,132 @@ void MainWindow::on_actionAddInstance_triggered()
     addInstance();
 }
 
+void MainWindow::on_actionMods_triggered()
+{
+    showModsFor(m_selectedInstance ? m_selectedInstance->id() : QString());
+}
+
+void MainWindow::createShell()
+{
+    auto* sidebar = new QFrame(ui->centralWidget);
+    sidebar->setObjectName("shellSidebar");
+    sidebar->setFixedWidth(92);
+    sidebar->setStyleSheet(
+        "#shellSidebar { background: palette(base); border-right: 1px solid palette(mid); }"
+        "#shellSidebar QToolButton { border: none; border-radius: 10px; padding: 6px; }"
+        "#shellSidebar QToolButton:hover { background: palette(alternate-base); }"
+        "#shellSidebar QToolButton:checked { background: palette(alternate-base); border-left: 3px solid palette(highlight); "
+        "font-weight: bold; }");
+    auto* sidebarLayout = new QVBoxLayout(sidebar);
+    sidebarLayout->setContentsMargins(8, 12, 8, 12);
+    sidebarLayout->setSpacing(6);
+
+    auto makeButton = [sidebar](const QString& icon, const QString& text) {
+        auto* button = new QToolButton(sidebar);
+        button->setIcon(QIcon::fromTheme(icon));
+        button->setText(text);
+        button->setIconSize(QSize(28, 28));
+        button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        button->setFixedSize(76, 64);
+        button->setCursor(Qt::PointingHandCursor);
+        return button;
+    };
+
+    m_navigation = new QButtonGroup(this);
+    m_navigation->setExclusive(true);
+    const QList<std::tuple<ShellPage, QString, QString>> entries{
+        { ShellPage::Home, "launch", tr("Home") },
+        { ShellPage::Profiles, "minecraft", tr("Profiles") },
+        { ShellPage::Mods, "loadermods", tr("Mods") },
+    };
+    for (const auto& [page, icon, text] : entries) {
+        auto* button = makeButton(icon, text);
+        button->setCheckable(true);
+        m_navigation->addButton(button, static_cast<int>(page));
+        sidebarLayout->addWidget(button);
+    }
+    sidebarLayout->addStretch(1);
+
+    auto* settingsButton = makeButton("settings", tr("Settings"));
+    connect(settingsButton, &QToolButton::clicked, this, &MainWindow::on_actionSettings_triggered);
+    sidebarLayout->addWidget(settingsButton);
+
+    m_pages = new QStackedWidget(ui->centralWidget);
+
+    m_homePage = new HomePage(m_pages);
+    m_pages->addWidget(m_homePage);
+
+    m_profilesPage = new QWidget(m_pages);
+    auto* profilesLayout = new QVBoxLayout(m_profilesPage);
+    profilesLayout->setContentsMargins(0, 0, 0, 0);
+    profilesLayout->addWidget(view);
+    m_pages->addWidget(m_profilesPage);
+
+    m_modsPage = new ModsPage(m_pages);
+    m_pages->addWidget(m_modsPage);
+
+    ui->horizontalLayout->addWidget(sidebar);
+    ui->horizontalLayout->addWidget(m_pages, 1);
+
+    connect(m_navigation, &QButtonGroup::idClicked, this, [this](int id) { showPage(static_cast<ShellPage>(id)); });
+    connect(m_homePage, &HomePage::instanceSelected, this, &MainWindow::setSelectedInstanceById);
+    connect(m_homePage, &HomePage::createInstanceRequested, this, [this] { addInstance(); });
+    connect(m_homePage, &HomePage::modsRequested, this, &MainWindow::showModsFor);
+    // Keep the instance toolbar's own show/hide choice, but only show it next to the profile list
+    connect(ui->instanceToolBar->toggleViewAction(), &QAction::triggered, this,
+            [this](bool checked) { m_instanceToolBarWanted = checked; });
+
+    showPage(ShellPage::Home);
+}
+
+void MainWindow::showPage(ShellPage page)
+{
+    if (auto* button = m_navigation->button(static_cast<int>(page))) {
+        button->setChecked(true);
+    }
+    switch (page) {
+        case ShellPage::Home:
+            m_pages->setCurrentWidget(m_homePage);
+            break;
+        case ShellPage::Profiles:
+            m_pages->setCurrentWidget(m_profilesPage);
+            break;
+        case ShellPage::Mods:
+            m_pages->setCurrentWidget(m_modsPage);
+            break;
+    }
+    // Until the window is shown, the saved window state still decides whether the user wants the toolbar
+    if (m_shellShown) {
+        ui->instanceToolBar->setVisible(page == ShellPage::Profiles && m_instanceToolBarWanted);
+    }
+}
+
+void MainWindow::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+    if (!m_shellShown) {
+        m_shellShown = true;
+        m_instanceToolBarWanted = !ui->instanceToolBar->isHidden();
+        showPage(static_cast<ShellPage>(m_navigation->checkedId()));
+    }
+}
+
+QString MainWindow::saveWindowState()
+{
+    // Save the instance toolbar as the user left it, not as hidden by the current page
+    bool hidden = ui->instanceToolBar->isHidden();
+    ui->instanceToolBar->setHidden(!m_instanceToolBarWanted);
+    auto state = QString::fromUtf8(saveState().toBase64());
+    ui->instanceToolBar->setHidden(hidden);
+    return state;
+}
+
+void MainWindow::showModsFor(const QString& instanceId)
+{
+    m_modsPage->focusProfile(instanceId);
+    showPage(ShellPage::Mods);
+}
+
 void MainWindow::processURLs(QList<QUrl> urls)
 {
     // NOTE: This loop only processes one dropped file!
@@ -1385,7 +1516,7 @@ void MainWindow::globalSettingsClosed()
     updateStatusCenter();
     // This needs to be done to prevent UI elements disappearing in the event the config is changed
     // but Prism Launcher exits abnormally, causing the window state to never be saved:
-    APPLICATION->settings()->set("MainWindowState", QString::fromUtf8(saveState().toBase64()));
+    APPLICATION->settings()->set("MainWindowState", saveWindowState());
     update();
 }
 
@@ -1580,7 +1711,7 @@ void MainWindow::on_actionViewSelectedInstFolder_triggered()
 void MainWindow::closeEvent(QCloseEvent* event)
 {
     // Save the window state and geometry.
-    APPLICATION->settings()->set("MainWindowState", QString::fromUtf8(saveState().toBase64()));
+    APPLICATION->settings()->set("MainWindowState", saveWindowState());
     APPLICATION->settings()->set("MainWindowGeometry", QString::fromUtf8(saveGeometry().toBase64()));
     instanceToolbarSetting->set(QString::fromUtf8(ui->instanceToolBar->getVisibilityState().toBase64()));
     event->accept();
@@ -1681,6 +1812,9 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         updateLaunchButton();
 
         APPLICATION->settings()->set("SelectedInstance", m_selectedInstance->id());
+        if (m_homePage) {
+            m_homePage->setCurrentInstance(m_selectedInstance->id());
+        }
 
         connect(m_selectedInstance, &BaseInstance::runningStatusChanged, this, &MainWindow::refreshCurrentInstance);
         connect(m_selectedInstance, &BaseInstance::profilerChanged, this, &MainWindow::refreshCurrentInstance);

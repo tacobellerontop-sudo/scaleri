@@ -77,9 +77,7 @@ class PageEntryFilterModel : public QSortFilterProxyModel {
 };
 
 PageContainer::PageContainer(BasePageProvider* pageProvider, QString defaultId, QWidget* parent)
-    : QWidget(parent)
-    , m_proxyModel(new PageEntryFilterModel(this))
-    , m_model(new PageModel(this))
+    : QWidget(parent), m_proxyModel(new PageEntryFilterModel(this)), m_model(new PageModel(this))
 {
     createUI();
     useSidebarStyle(true);
@@ -165,31 +163,47 @@ void PageContainer::createUI()
 {
     m_pageStack = new QStackedLayout;
     m_pageList = new PageView;
-    m_header = new QLabel();
+    m_pageList->setObjectName("pageList");
+    m_pageList->setMinimumWidth(190);
+
+    // Scaleri page header: the page's icon and a large title on a bar above the page
+    auto* headerBar = new QWidget(this);
+    headerBar->setObjectName("pageHeader");
+    headerBar->setAttribute(Qt::WA_StyledBackground);
+    m_headerIcon = new QLabel(headerBar);
+    m_headerIcon->setObjectName("pageHeaderIcon");
+    m_headerIcon->setFixedSize(32, 32);
+    m_header = new QLabel(headerBar);
+    m_header->setObjectName("pageHeaderTitle");
 
     QFont headerLabelFont = m_header->font();
     headerLabelFont.setBold(true);
-    const int pointSize = headerLabelFont.pointSize();
+    const qreal pointSize = headerLabelFont.pointSizeF();
     if (pointSize > 0) {
-        headerLabelFont.setPointSize(pointSize + 2);
+        headerLabelFont.setPointSizeF(pointSize * 1.5);
     }
     m_header->setFont(headerLabelFont);
 
-    auto* headerHLayout = new QHBoxLayout;
-    const int leftMargin = APPLICATION->style()->pixelMetric(QStyle::PM_LayoutLeftMargin);
-    headerHLayout->addSpacerItem(new QSpacerItem(leftMargin, 0, QSizePolicy::Fixed, QSizePolicy::Ignored));
-    headerHLayout->addWidget(m_header);
-    headerHLayout->setContentsMargins(0, 6, 0, 0);
+    auto* headerHLayout = new QHBoxLayout(headerBar);
+    headerHLayout->setContentsMargins(16, 10, 16, 10);
+    headerHLayout->setSpacing(12);
+    headerHLayout->addWidget(m_headerIcon);
+    headerHLayout->addWidget(m_header, 1);
 
-    m_pageStack->setContentsMargins(0, 0, 0, 0);
     m_pageStack->addWidget(new QWidget(this));
+    auto* stackHost = new QWidget(this);
+    stackHost->setObjectName("pageStack");
+    stackHost->setLayout(m_pageStack);
+    stackHost->setContentsMargins(10, 8, 10, 0);
 
     m_layout = new QGridLayout;
-    m_layout->addLayout(headerHLayout, 0, 1, 1, 1);
+    m_layout->addWidget(headerBar, 0, 1, 1, 1);
     m_layout->addWidget(m_pageList, 0, 0, 3, 1);
-    m_layout->addLayout(m_pageStack, 1, 1, 1, 1);
+    m_layout->addWidget(stackHost, 1, 1, 1, 1);
     m_layout->setColumnStretch(1, 4);
     m_layout->setContentsMargins(0, 0, 0, 0);
+    m_layout->setHorizontalSpacing(0);
+    m_layout->setVerticalSpacing(0);
     setLayout(m_layout);
 }
 
@@ -206,11 +220,13 @@ void PageContainer::retranslate()
 
 void PageContainer::addButtons(QWidget* buttons)
 {
+    buttons->setContentsMargins(10, 8, 10, 8);
     m_layout->addWidget(buttons, 2, 1, 1, 2);
 }
 
 void PageContainer::addButtons(QLayout* buttons)
 {
+    buttons->setContentsMargins(10, 8, 10, 8);
     m_layout->addLayout(buttons, 2, 1, 1, 2);
 }
 
@@ -232,10 +248,12 @@ void PageContainer::showPage(int row)
     if (m_currentPage) {
         m_pageStack->setCurrentIndex(m_currentPage->stackIndex);
         m_header->setText(m_currentPage->displayName());
+        m_headerIcon->setPixmap(m_currentPage->icon().pixmap(32, 32));
         m_currentPage->opened();
     } else {
         m_pageStack->setCurrentIndex(0);
         m_header->setText(QString());
+        m_headerIcon->clear();
     }
 }
 

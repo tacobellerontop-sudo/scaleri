@@ -58,6 +58,10 @@ class QLabel;
 class MinecraftLauncher;
 class BaseProfilerFactory;
 class InstanceView;
+class HomePage;
+class ModsPage;
+class QButtonGroup;
+class QStackedWidget;
 class KonamiCode;
 class InstanceTask;
 class LabeledToolButton;
@@ -74,6 +78,7 @@ class MainWindow : public QMainWindow {
 
     bool eventFilter(QObject* obj, QEvent* ev) override;
     void closeEvent(QCloseEvent* event) override;
+    void showEvent(QShowEvent* event) override;
     void changeEvent(QEvent* event) override;
 
     void checkInstancePathForProblems();
@@ -95,6 +100,8 @@ class MainWindow : public QMainWindow {
     void on_actionAbout_triggered();
 
     void on_actionAddInstance_triggered();
+
+    void on_actionMods_triggered();
 
     void on_actionREDDIT_triggered();
 
@@ -230,6 +237,12 @@ class MainWindow : public QMainWindow {
     void runModalTask(Task* task);
     void instanceFromInstanceTask(InstanceTask* task);
 
+    enum class ShellPage { Home, Profiles, Mods };
+    void createShell();
+    void showPage(ShellPage page);
+    void showModsFor(const QString& instanceId);
+    QString saveWindowState();
+
    private:
     Ui::MainWindow* ui;
     // these are managed by Qt's memory management model!
@@ -242,6 +255,13 @@ class MainWindow : public QMainWindow {
     LabeledToolButton* renameButton = nullptr;
     QToolButton* helpMenuButton = nullptr;
     KonamiCode* secretEventFilter = nullptr;
+    QStackedWidget* m_pages = nullptr;
+    QButtonGroup* m_navigation = nullptr;
+    HomePage* m_homePage = nullptr;
+    ModsPage* m_modsPage = nullptr;
+    QWidget* m_profilesPage = nullptr;
+    bool m_instanceToolBarWanted = true;
+    bool m_shellShown = false;
 
     std::shared_ptr<Setting> instanceToolbarSetting = nullptr;
 

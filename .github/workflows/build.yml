@@ -27,8 +27,46 @@ on:
 permissions: {}
 
 jobs:
+  # Scaleri Client, the PvP mod in client/, ships inside every launcher build
+  client-jar:
+    name: Build Scaleri Client
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew build --no-daemon
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: Scaleri-Client-jar
+          path: |
+            client/build/libs/scaleri-client-*.jar
+            !client/build/libs/*-sources.jar
+          if-no-files-found: error
+
   build:
     name: Build (${{ matrix.artifact-name }})
+    needs: client-jar
 
     environment: ${{ inputs.environment || '' }}
 
@@ -118,21 +156,64 @@ jobs:
           vcvars-arch: ${{ matrix.vcvars-arch }}
           qt-version: ${{ matrix.qt-version }}
 
+      - name: Download Scaleri Client
+        uses: actions/download-artifact@v4
+        with:
+          name: Scaleri-Client-jar
+          path: client-jar
+
       ##
       # BUILD
       ##
 
       - name: Configure project
+        env:
+          # Optional: set these as repository secrets to enable Microsoft login and CurseForge in CI builds.
+          # Empty values are left out so the defaults in CMakeLists.txt stay in effect.
+          MSA_CLIENT_ID: ${{ secrets.MSA_CLIENT_ID }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
-          cmake --preset "$CMAKE_PRESET"
+          jar="$(ls "$PWD"/client-jar/scaleri-client-*.jar | head -n 1)"
+          if command -v cygpath > /dev/null; then jar="$(cygpath -m "$jar")"; fi
+          args=(-D "Launcher_SCALERI_CLIENT_JAR=$jar")
+          if [ -n "$MSA_CLIENT_ID" ]; then args+=(-D "Launcher_MSA_CLIENT_ID=$MSA_CLIENT_ID"); fi
+          if [ -n "$CURSEFORGE_API_KEY" ]; then args+=(-D "Launcher_CURSEFORGE_API_KEY=$CURSEFORGE_API_KEY"); fi
+          cmake --preset "$CMAKE_PRESET" "${args[@]}"
 
       - name: Run build
         run: |
-          cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE"
+          # vcpkg's applocal step copies DLLs next to each test as it links, and parallel links on Windows sometimes
+          # collide on the same file ("being used by another process"). Ninja only redoes what failed, so retry once.
+          cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE" ||
+            cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE"
 
       - name: Run tests
         run: |
-          ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE"
+          # TEMPORARY: CTest shows no Qt Test output on MinGW, and ResourceFolderModel only fails on its first run there,
+          # so run it once directly with a log file first to see which check fails
+          diagnostic=0
+          if [ -n "$MSYSTEM" ] && [ -f "build/$BUILD_TYPE/ResourceFolderModel.exe" ]; then
+            start=$(date +%s)
+            (cd build/tests && "../$BUILD_TYPE/ResourceFolderModel.exe" -o ../ResourceFolderModel-first.log,txt -v2) || diagnostic=1
+            echo "ResourceFolderModel first run: exit $diagnostic after $(( $(date +%s) - start ))s"
+            [ "$diagnostic" = 0 ] || grep -v "message location" build/ResourceFolderModel-first.log || true
+          fi
+          # On failure, run the failed tests again verbosely to tell a flaky test from a broken one
+          ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --output-on-failure || {
+            ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --rerun-failed --extra-verbose
+            # Some Windows builds don't pass Qt Test's output through CTest, so also run each failed test with a log file
+            sed -n 's/^[0-9]*://p' build/Testing/Temporary/LastTestsFailed*.log 2>/dev/null | sort -u | while read -r test; do
+              for exe in "build/$BUILD_TYPE/$test.exe" "build/$BUILD_TYPE/$test" "build/$test"; do
+                if [ -f "$exe" ]; then
+                  (cd build/tests && "../../$exe" -o "../$test.log,txt" -v2) || true
+                  cat "build/$test.log" || true
+                  break
+                fi
+              done
+            done
+            exit 1
+          }
+          exit $diagnostic
 
       ##
       # PACKAGE

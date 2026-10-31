@@ -1,114 +1,109 @@
 <p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo-darkmode.svg">
-  <source media="(prefers-color-scheme: light)" srcset="/program_info/org.prismlauncher.PrismLauncher.logo.svg">
-  <img alt="Prism Launcher" src="/program_info/org.prismlauncher.PrismLauncher.logo.svg" width="40%">
-</picture>
+  <img alt="Scaleri" src="/program_info/io.github.tacobellerontop_sudo.Scaleri.logo.svg" width="50%">
 </p>
 
 <p align="center">
-  Prism Launcher is a custom launcher for Minecraft that allows you to easily manage multiple installations of Minecraft at once.<br />
-  <br />This is a <b>fork</b> of the MultiMC Launcher and is <b>not</b> endorsed by it.
+  Scaleri is a modern custom launcher for Minecraft that lets you easily manage multiple installations of Minecraft at once.<br />
+  <br />Scaleri is built on <a href="https://github.com/PrismLauncher/PrismLauncher">Prism Launcher</a> and is <b>not</b> endorsed by the Prism Launcher or MultiMC projects.
 </p>
 
-## Installation
+<p align="center">
+  <img alt="Scaleri home screen" src="/docs/screenshots/main-window.png" width="85%">
+</p>
+<p align="center">
+  <img alt="Scaleri settings" src="/docs/screenshots/settings.png" width="42%">
+  <img alt="Scaleri instance editor" src="/docs/screenshots/edit-instance.png" width="42%">
+</p>
 
-<a href="https://repology.org/project/prismlauncher/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/prismlauncher.svg" alt="Packaging status" align="right">
-</a>
+## Scaleri Client
 
-- All downloads and instructions for Prism Launcher can be found on our [Website](https://prismlauncher.org/download).
-- Last build status can be found in the [GitHub Actions](https://github.com/PrismLauncher/PrismLauncher/actions) tab (this also includes the pull requests status).
+Scaleri comes with **Scaleri Client**, a casual PvP and HUD mod for Minecraft 1.21.1 (Fabric), built in. There is
+nothing to download:
 
-### Development Builds
+- On first start, Scaleri creates a **Scaleri Client 1.21.1** profile (Minecraft 1.21.1 with Fabric Loader) and selects it,
+  so the first Play starts the game with the mod.
+- Before every launch, Scaleri copies the version of the mod that came with the launcher into the profile's `mods`
+  folder if it changed, so updating Scaleri updates the mod. Fabric API, which the mod needs, is downloaded from Modrinth
+  the first time. Your Scaleri Client settings (`config/scaleri-client.json`) are never touched.
+- Any other Minecraft 1.21.1 Fabric profile can use it too: tick **Scaleri Client** under the Play button on *Home*.
+  Unticking it removes the mod from that profile. If you delete the Scaleri Client profile, *Home* offers to add it back.
 
-Please understand that these builds are not intended for most users. There may be bugs, and other instabilities. You have been warned.
+The mod's source is in [`client/`](client/README.md). Launcher builds bundle it as `jars/scaleri-client.jar` (see
+[Building](#building)).
 
-There are development builds available through:
+## What's different from Prism Launcher
 
-- [GitHub Actions](https://github.com/PrismLauncher/PrismLauncher/actions) (includes builds from pull requests opened by contributors)
-- [nightly.link](https://prismlauncher.org/nightly) (this will always point only to the latest version of develop)
+- **New home screen.** A sidebar for adding instances, settings, folders, help and accounts; a hero banner with a
+  pixel-art landscape showing the selected instance and a big green Play button; and a searchable instance library.
+- **Redesigned windows.** Settings, Edit Instance, New Instance and the mod browser share a new layout: a dark sidebar
+  with a green marker on the current page, and a header bar with the page's icon and title.
+- **New look.** A built-in *Scaleri* theme, on by default: deepslate greys, square corners, bevelled block buttons,
+  grass-green accents, an XP-bar progress bar and Minecraft-style purple tooltips. Game logs use Minecraft's chat colours.
+  The other Prism themes are still available under *Settings → Appearance*.
+- **New identity.** Scaleri has its own name, pixel-art logo and app ID (`io.github.tacobellerontop_sudo.Scaleri`),
+  and keeps its data in its own folder, so it can be installed side by side with Prism Launcher.
+- **Scaleri Client built in.** See [above](#scaleri-client).
+- **Your own API keys.** Scaleri does not reuse Prism Launcher's Microsoft, CurseForge or Imgur keys (see below).
 
-These have debug information in the binaries, so their file sizes are relatively larger.
-
-Prebuilt Development builds are provided for **Linux**, **Windows** and **macOS**.
-
-On Linux, we also offer our own [Flatpak nightly repository](https://github.com/PrismLauncher/flatpak). Most software centers are able to install it by opening [this link](https://flatpak.prismlauncher.org/prismlauncher-nightly.flatpakref).
-
-## Community & Support
-
-Feel free to create a GitHub issue if you find a bug or want to suggest a new feature. We have multiple community spaces where other community members can help you:
-
-- **Our Discord server:**
-
-[![Prism Launcher Discord server](https://discordapp.com/api/guilds/1031648380885147709/widget.png?style=banner3)](https://prismlauncher.org/discord)
-
-- **Our Matrix space:**
-
-[![Prism Launcher Space](https://img.shields.io/matrix/prismlauncher:matrix.org?style=for-the-badge&label=Matrix%20Space&logo=matrix&color=purple)](https://prismlauncher.org/matrix)
-
-- **Our Subreddit:**
-
-[![r/PrismLauncher](https://img.shields.io/reddit/subreddit-subscribers/prismlauncher?style=for-the-badge&logo=reddit)](https://prismlauncher.org/reddit)
-
-## Translations
-
-The translation effort for Prism Launcher is hosted on [Weblate](https://hosted.weblate.org/projects/prismlauncher/launcher/) and information about translating Prism Launcher is available at <https://github.com/PrismLauncher/Translations>.
+Everything else (instances, mod loaders, modpacks, Modrinth/CurseForge browsing, Java management) works exactly as in
+Prism Launcher 11.1.1, which Scaleri is based on. Instances exported from Scaleri, Prism Launcher, PolyMC or MultiMC can be
+imported into each other.
 
 ## Building
 
-If you want to build Prism Launcher yourself, check the [build instructions](https://prismlauncher.org/wiki/development/build-instructions).
+Scaleri builds exactly like Prism Launcher; follow the
+[Prism Launcher build instructions](https://prismlauncher.org/wiki/development/build-instructions). For example, on Ubuntu 24.04:
 
-## Sponsors & Partners
+```sh
+sudo apt install cmake ninja-build extra-cmake-modules openjdk-17-jdk-headless cmark libcmark-dev gamemode-dev \
+  qt6-base-dev qt6-base-private-dev qt6-5compat-dev qt6-networkauth-dev qt6-svg-dev qt6-tools-dev qt6-image-formats-plugins \
+  libqt6opengl6-dev libgl-dev libqrencode-dev libarchive-dev libtomlplusplus-dev zlib1g-dev scdoc
 
-We thank all the wonderful backers over at Open Collective! Support Prism Launcher by [becoming a backer](https://opencollective.com/prismlauncher).
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install \
+  -DLauncher_BUILD_SCALERI_CLIENT=ON
+cmake --build build
+cmake --install build
+./install/bin/scaleri
+```
 
-[![OpenCollective Backers](https://opencollective.com/prismlauncher/backers.svg?width=890&limit=1000)](https://opencollective.com/prismlauncher#backers)
+`Launcher_BUILD_SCALERI_CLIENT=ON` builds Scaleri Client from `client/` with Gradle, which needs JDK 21 (set `JAVA_HOME`
+to it if your default Java is 17) and Internet access. If you already have the mod's jar, pass
+`-DLauncher_SCALERI_CLIENT_JAR=/path/to/scaleri-client-0.1.0.jar` instead. Without either, the launcher builds and runs
+but Scaleri Client profiles have no mod to install.
 
-Thanks to JetBrains for providing us a few licenses for all their products, as part of their [Open Source program](https://www.jetbrains.com/opensource/).
+Pull requests to this repository are built for Linux, Windows and macOS by GitHub Actions, and the packages are attached
+to each run. CI builds Scaleri Client first and bundles it into every package.
 
-<a href="https://jb.gg/OpenSource">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://www.jetbrains.com/company/brand/img/logo_jb_dos_4.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg">
-  <img alt="JetBrains logo" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" width="40%">
-</picture>
-</a>
+### API keys
 
-Thanks to Weblate for hosting our translation efforts.
+Prism Launcher's keys were issued to Prism Launcher, and its build files ask rebrands to use their own. Microsoft login
+uses Scaleri's own Azure application (`174db889-6412-4846-869e-faafd5a578d0`), which Microsoft approved for the
+Minecraft services, so it works out of the box. The other keys are empty, which turns the matching feature off until
+you provide one:
 
-<a href="https://hosted.weblate.org/engage/prismlauncher/">
-<img src="https://hosted.weblate.org/widgets/prismlauncher/-/open-graph.png" alt="Translation status" width="300" />
-</a>
+| Feature | CMake option | Where to get one |
+| --- | --- | --- |
+| Microsoft account login (needed to play online) | `Launcher_MSA_CLIENT_ID` | Built in. To use another app, register one in the [Microsoft Entra admin center](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app) as a public client with "Personal Microsoft accounts" enabled, then [request Minecraft API access](https://aka.ms/mce-reviewappid). |
+| CurseForge browsing and modpacks | `Launcher_CURSEFORGE_API_KEY` | Apply at the [CurseForge for Studios console](https://console.curseforge.com/). |
+| Imgur screenshot uploads | `Launcher_IMGUR_CLIENT_ID` | [Register an Imgur application](https://api.imgur.com/oauth2/addclient). |
 
-Thanks to Netlify for providing us their excellent web services, as part of their [Open Source program](https://www.netlify.com/open-source/).
+You can also paste the Microsoft client ID and CurseForge key into *Settings → APIs* in a running build. For CI builds,
+add them as the repository secrets `MSA_CLIENT_ID` and `CURSEFORGE_API_KEY`.
 
-<a href="https://www.netlify.com"> <img src="https://www.netlify.com/v3/img/components/netlify-color-accent.svg" alt="Deploys by Netlify" /> </a>
+### Changing the branding
 
-Thanks to the awesome people over at [MacStadium](https://www.macstadium.com/), for providing M1-Macs for development purposes!
+The name, app ID and URLs live in `program_info/CMakeLists.txt` and the top-level `CMakeLists.txt`. The logo and every
+icon are generated from the pixel art in `program_info/genicons.py`. The theme is `launcher/ui/themes/ScaleriTheme.cpp`
+(palette) and `launcher/resources/scaleri_theme/scaleri.qss` (stylesheet).
 
-<a href="https://www.macstadium.com"><img src="https://uploads-ssl.webflow.com/5ac3c046c82724970fc60918/5c019d917bba312af7553b49_MacStadium-developerlogo.png" alt="Powered by MacStadium" width="300"></a>
+## Staying up to date with Prism Launcher
 
-## Forking/Redistributing/Custom builds policy
+The first commit on `main` is an unmodified import of Prism Launcher 11.1.1. To pull in a newer release, create a
+branch from that import commit, replace its contents with the new release's source (with `libraries/libnbtplusplus`
+copied in), commit, and merge that branch into `main`. Git then only asks you to resolve the files Scaleri changed.
 
-You are free to fork, redistribute and provide custom builds as long as you follow the terms of the [license](LICENSE) (this is a legal responsibility), and if you made code changes rather than just packaging a custom build, please do the following as a basic courtesy:
+## License
 
-- Make it clear that your fork is not Prism Launcher and is not endorsed by or affiliated with the Prism Launcher project (<https://prismlauncher.org>).
-- Go through [CMakeLists.txt](CMakeLists.txt) and change Prism Launcher's API keys to your own or set them to empty strings (`""`) to disable them (this way the program will still compile but the functionality requiring those keys will be disabled).
-
-If you have any questions or want any clarification on the above conditions please make an issue and ask us.
-
-If you are just building Prism Launcher for your distribution, please make sure to set the `Launcher_BUILD_PLATFORM` to a slug representing your distribution. Examples are `archlinux`, `fedora` and `nixpkgs`.
-
-Note that if you build this software without removing the provided API keys in [CMakeLists.txt](CMakeLists.txt) you are accepting the following terms and conditions:
-
-- [Microsoft Identity Platform Terms of Use](https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use)
-- [CurseForge 3rd Party API Terms and Conditions](https://support.curseforge.com/en/support/solutions/articles/9000207405-curse-forge-3rd-party-api-terms-and-conditions)
-
-If you do not agree with these terms and conditions, then remove the associated API keys from the [CMakeLists.txt](CMakeLists.txt) file by setting them to an empty string (`""`).
-
-## License [![https://github.com/PrismLauncher/PrismLauncher/blob/develop/LICENSE](https://img.shields.io/github/license/PrismLauncher/PrismLauncher?label=License&logo=gnu&color=C4282D)](LICENSE)
-
-All launcher code is available under the GPL-3.0-only license.
-
-The logo and related assets are under the CC BY-SA 4.0 license.
+Scaleri is free software under the GNU General Public License v3.0, like Prism Launcher. See [LICENSE](LICENSE) and
+[COPYING.md](COPYING.md), which keeps the notices of Prism Launcher, PolyMC, MultiMC and the bundled libraries.
+The Scaleri logo and icons are licensed under CC BY-SA 4.0.

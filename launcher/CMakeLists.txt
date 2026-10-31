@@ -276,6 +276,8 @@ set(MINECRAFT_SOURCES
     minecraft/launch/PrintInstanceInfo.h
     minecraft/launch/ReconstructAssets.cpp
     minecraft/launch/ReconstructAssets.h
+    minecraft/launch/InstallScaleriClient.cpp
+    minecraft/launch/InstallScaleriClient.h
     minecraft/launch/ScanModFolders.cpp
     minecraft/launch/ScanModFolders.h
     minecraft/launch/VerifyJavaInstall.cpp
@@ -870,6 +872,8 @@ SET(LAUNCHER_SOURCES
     ui/themes/CustomTheme.h
     ui/themes/DarkTheme.cpp
     ui/themes/DarkTheme.h
+    ui/themes/ScaleriTheme.cpp
+    ui/themes/ScaleriTheme.h
     ui/themes/ITheme.cpp
     ui/themes/ITheme.h
     ui/themes/HintOverrideProxyStyle.cpp
@@ -1065,6 +1069,18 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/IconPickerDialog.h
     ui/dialogs/ImportResourceDialog.cpp
     ui/dialogs/ImportResourceDialog.h
+
+    # Scaleri Client, the bundled PvP mod
+    scaleri/ScaleriClient.cpp
+    scaleri/ScaleriClient.h
+
+    # Main window shell (sidebar pages)
+    ui/shell/HomePage.cpp
+    ui/shell/HomePage.h
+    ui/shell/ModsPage.cpp
+    ui/shell/ModsPage.h
+    ui/shell/ProfileModsInstaller.cpp
+    ui/shell/ProfileModsInstaller.h
     ui/dialogs/MSALoginDialog.cpp
     ui/dialogs/MSALoginDialog.h
     ui/dialogs/NetworkJobFailedDialog.cpp
@@ -1296,6 +1312,7 @@ qt_add_resources(LAUNCHER_RESOURCES
     resources/flat_white/flat_white.qrc
     resources/documents/documents.qrc
     resources/shaders/shaders.qrc
+    resources/scaleri_theme/scaleri_theme.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
 )
 

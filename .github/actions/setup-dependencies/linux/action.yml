@@ -1,5 +1,5 @@
 name: Setup Linux dependencies
-description: Install and setup dependencies for building Prism Launcher
+description: Install and setup dependencies for building Scaleri
 
 runs:
   using: composite
@@ -14,6 +14,13 @@ runs:
           ninja-build extra-cmake-modules pkg-config scdoc \
           cmark gamemode-dev libarchive-dev libcmark-dev libqrencode-dev zlib1g-dev \
           libxcb-cursor-dev libtomlplusplus-dev
+
+    # JavaCheck and NewLaunch target Java 7 so they run on old Java installs, which JDK 20 and later can't build
+    - name: Setup Java
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 17
 
     - name: Setup AppImage tooling
       shell: bash
