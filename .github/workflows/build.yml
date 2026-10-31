@@ -192,6 +192,16 @@ jobs:
           # On failure, run the failed tests again verbosely to tell a flaky test from a broken one
           ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --output-on-failure || {
             ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --rerun-failed --extra-verbose
+            # Some Windows builds don't pass Qt Test's output through CTest, so also run each failed test with a log file
+            sed -n 's/^[0-9]*://p' build/Testing/Temporary/LastTestsFailed*.log 2>/dev/null | sort -u | while read -r test; do
+              for exe in "build/$BUILD_TYPE/$test.exe" "build/$BUILD_TYPE/$test" "build/$test"; do
+                if [ -f "$exe" ]; then
+                  (cd build/tests && "../../$exe" -o "../$test.log,txt" -v2) || true
+                  cat "build/$test.log" || true
+                  break
+                fi
+              done
+            done
             exit 1
           }
 
