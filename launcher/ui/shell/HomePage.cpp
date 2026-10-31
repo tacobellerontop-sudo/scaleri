@@ -242,7 +242,7 @@ void HomePage::updateCard()
 
     m_icon->setPixmap(APPLICATION->icons()->getIcon(instance->iconKey()).pixmap(64, 64));
     m_name->setText(instance->name());
-    if (auto* minecraft = dynamic_cast<MinecraftInstance*>(instance)) {
+    if (minecraft) {
         m_details->setText(ProfileInfo::summary(minecraft));
     } else {
         m_details->setText(instance->instanceType());

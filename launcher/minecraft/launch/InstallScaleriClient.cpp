@@ -71,8 +71,8 @@ void InstallScaleriClient::executeTask()
     emit logLine(tr("Downloading Fabric API for Scaleri Client..."), MessageLevel::Launcher);
     m_download.reset(new ScaleriClient::FabricApiDownloadTask(modsDir, ScaleriClient::minecraftVersion()));
     connect(m_download.get(), &Task::succeeded, this, &InstallScaleriClient::emitSucceeded);
-    connect(m_download.get(), &Task::failed, this, [this](const QString& reason) {
-        auto message = tr("Couldn't download Fabric API for Scaleri Client: %1").arg(reason);
+    connect(m_download.get(), &Task::failed, this, [this](const QString& failure) {
+        auto message = tr("Couldn't download Fabric API for Scaleri Client: %1").arg(failure);
         emit logLine(message, MessageLevel::Fatal);
         emitFailed(message);
     });
