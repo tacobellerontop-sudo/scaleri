@@ -15,6 +15,10 @@
   <img alt="Scaleri instance editor" src="/docs/screenshots/edit-instance.png" width="42%">
 </p>
 
+## Scaleri Client
+
+Scaleri ships with **Scaleri Client**, a casual PvP and HUD mod for Minecraft 1.21.1 (Fabric). See [`client/README.md`](client/README.md).
+
 ## What's different from Prism Launcher
 
 - **New home screen.** A sidebar for adding instances, settings, folders, help and accounts; a hero banner with a
