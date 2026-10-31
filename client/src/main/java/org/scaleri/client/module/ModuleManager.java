@@ -43,6 +43,10 @@ public class ModuleManager {
         add(new SpeedModule());
         add(new MemoryModule());
         add(new ServerAddressModule());
+        add(new SessionTimerModule());
+        add(new DirectionModule());
+        add(new ItemCounterModule());
+        add(new CooldownsModule());
 
         toggleSprint = add(new ToggleSprintModule());
         crosshair = add(new CrosshairModule());

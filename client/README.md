@@ -24,13 +24,15 @@ and right-click one to open its settings. Modules snap to the screen edges and c
 
 **HUD:** FPS, CPS, Ping, Coordinates (with direction and biome), Keystrokes (WASD,
 mouse buttons with CPS, spacebar), Armor Status, Potion Effects, Reach Display,
-Combo Counter, Clock, Speed, Memory, Server Address
+Combo Counter, Clock, Speed, Memory, Server Address, Session Timer, Direction HUD
+(compass bar), Item Counter (healing pots, golden apples, pearls, arrows, totems),
+Item Cooldowns (pearl, chorus fruit, shield, wind charge, goat horn)
 
 **PvP:** Toggle Sprint / Sneak, Custom Crosshair (6 styles, target highlight,
 attack cooldown bar), No Hurt Cam, Low Fire, Block Outline (color and fill),
 Hit Particles
 
-**Visual:** Zoom (smooth, scroll to adjust), Freelook, Fullbright, Time Changer,
+**Visual:** Zoom (smooth, scroll to adjust, lower mouse sensitivity while zoomed), Freelook, Fullbright, Time Changer,
 Clear Weather
 
 **Misc:** Chat Timestamps, Auto GG, Death Coordinates, Theme (accent color and branding)

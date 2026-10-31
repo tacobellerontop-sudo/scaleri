@@ -50,6 +50,10 @@ public class FreelookModule extends Module {
             }
             want = toggled;
         } else {
+            // Drain presses so switching to Toggle later doesn't replay them.
+            while (key.wasPressed()) {
+                toggled = false;
+            }
             want = key.isPressed();
         }
         if (mc.player == null) {
