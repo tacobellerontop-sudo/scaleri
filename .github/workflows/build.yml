@@ -182,12 +182,15 @@ jobs:
 
       - name: Run build
         run: |
-          cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE"
+          # vcpkg's applocal step copies DLLs next to each test as it links, and parallel links on Windows sometimes
+          # collide on the same file ("being used by another process"). Ninja only redoes what failed, so retry once.
+          cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE" ||
+            cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE"
 
       - name: Run tests
         run: |
-          # On failure, run the failed tests again verbosely so their output shows up in the log
-          ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" || {
+          # On failure, run the failed tests again verbosely to tell a flaky test from a broken one
+          ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --output-on-failure || {
             ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --rerun-failed --extra-verbose
             exit 1
           }
