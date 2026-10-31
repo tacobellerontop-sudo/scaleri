@@ -12,6 +12,7 @@ public class ZoomModule extends Module {
     private final BoolSetting smooth = add(new BoolSetting("Smooth Zoom", true));
     private final BoolSetting scroll = add(new BoolSetting("Scroll To Adjust", true));
     private final BoolSetting cinematic = add(new BoolSetting("Cinematic Camera", false));
+    private final BoolSetting lowerSensitivity = add(new BoolSetting("Lower Sensitivity", true));
 
     private KeyBinding key;
     private double scrollFactor = 1;
@@ -63,6 +64,11 @@ public class ZoomModule extends Module {
         }
         scrollFactor = MathHelper.clamp(scrollFactor * (vertical > 0 ? 1.25 : 0.8), 0.25, 8);
         return true;
+    }
+
+    /** How much to scale mouse movement by, so aiming feels the same while zoomed in. */
+    public double getSensitivityFactor() {
+        return lowerSensitivity.isOn() && current > 1 ? 1 / current : 1;
     }
 
     /** How much to divide the field of view by this frame. */

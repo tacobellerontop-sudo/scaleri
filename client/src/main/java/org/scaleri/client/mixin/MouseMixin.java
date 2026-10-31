@@ -35,6 +35,9 @@ public class MouseMixin {
     @Redirect(method = "updateMouse", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/network/ClientPlayerEntity;changeLookDirection(DD)V"))
     private void scaleri$freelook(ClientPlayerEntity player, double dx, double dy) {
+        double factor = ScaleriClient.get().getModules().getZoom().getSensitivityFactor();
+        dx *= factor;
+        dy *= factor;
         FreelookModule freelook = ScaleriClient.get().getModules().getFreelook();
         if (freelook.isEnabled() && freelook.isActive()) {
             freelook.turn(dx, dy);

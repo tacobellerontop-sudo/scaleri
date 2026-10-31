@@ -214,7 +214,7 @@ public class ModMenuScreen extends ScaleriScreen {
             search = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0 ? "" : search.substring(0, search.length() - 1);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+        if (ScaleriClient.get().getMenuKey().matchesKey(keyCode, scanCode)) {
             close();
             return true;
         }

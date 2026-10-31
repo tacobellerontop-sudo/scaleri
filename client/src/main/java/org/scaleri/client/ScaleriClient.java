@@ -53,6 +53,10 @@ public class ScaleriClient implements ClientModInitializer {
         return config;
     }
 
+    public KeyBinding getMenuKey() {
+        return menuKey;
+    }
+
     @Override
     public void onInitializeClient() {
         instance = this;
