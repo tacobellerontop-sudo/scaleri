@@ -51,7 +51,7 @@
     QTimer expire_timer;                                                                \
     expire_timer.callOnTimeout(&loop, &QEventLoop::quit);                               \
     expire_timer.setSingleShot(true);                                                   \
-    expire_timer.start(15000);                                                          \
+    expire_timer.start(4000);                                                           \
                                                                                         \
     VERIFY(EXEC);                                                                       \
     loop.exec();                                                                        \

@@ -186,7 +186,11 @@ jobs:
 
       - name: Run tests
         run: |
-          ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --output-on-failure
+          # On failure, run the failed tests again verbosely so their output shows up in the log
+          ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" || {
+            ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE" --rerun-failed --extra-verbose
+            exit 1
+          }
 
       ##
       # PACKAGE
